@@ -72,17 +72,26 @@ interface Priced {
 
 const minutes = (ms: number) => (ms / 60_000).toFixed(1);
 
-// Cheapest first among priced candidates; unpriced ones after, newest first.
-// A priced candidate is comparable on two axes: work, then how many files
-// differ, so two equal-cost directories prefer the closer tree.
+// Cheapest first among priced candidates; unpriced ones after, closest
+// first. A priced candidate is comparable on two axes: work, then how many
+// files differ, so two equal-cost directories prefer the closer tree. Among
+// unpriced ones the number of differing inputs is the only measure there
+// is: a pull request that rewrites DEPS is unpriceable against every
+// directory, and newest-first picked another branch's, 4,901 inputs away,
+// over the pull request's own from an hour earlier, 5 inputs away (run
+// 44025223509). A commit that cannot be diffed is farthest. Ties go to the
+// newer directory.
 function better(a: Priced, b: Priced): boolean {
+  const newer = Date.parse(a.candidate.createdAt) > Date.parse(b.candidate.createdAt);
   if (a.ms !== null && b.ms !== null) {
     if (a.ms !== b.ms) return a.ms < b.ms;
     if (a.changed !== b.changed) return a.changed < b.changed;
-    return Date.parse(a.candidate.createdAt) > Date.parse(b.candidate.createdAt);
+    return newer;
   }
   if (a.ms !== null || b.ms !== null) return a.ms !== null;
-  return Date.parse(a.candidate.createdAt) > Date.parse(b.candidate.createdAt);
+  const distance = (p: Priced) => p.changed < 0 ? Infinity : p.changed;
+  if (distance(a) !== distance(b)) return distance(a) < distance(b);
+  return newer;
 }
 
 export async function select(options: {requested: string; target: string; fingerprint: string|undefined} & Sources): Promise<Selection> {
