@@ -287,7 +287,7 @@ const zh = {
   'method.noisy.title': '波动（noisy）的判定',
   'method.noisy.body': '运行器在每个分片开始前采样 5 秒的宿主空闲 CPU，把上限定为 max(25%, 空闲 p95 + 10 个百分点)，最高 80%。连续三个一秒采样低于上限且空闲内存平稳才算稳定；6 秒内达不到稳定的测试项标记为 noisy 并重试一次。noisy 的数据仅供参考，不计入排名。环境异常（infra-error）指宿主的监控或下载超时等偶发问题，不是引擎的问题。',
   'method.evidence.title': '证据',
-  'method.evidence.body': '每个分片的截图、日志、进程追踪作为 CI 工件保留 90 天；summary.json、samples.jsonl、quality.json、failures.json 归档在仓库的 benchmark-results/ 目录。本站只读取这些文件，不内嵌任何快照。',
+  'method.evidence.body': '每个分片的截图、日志、进程追踪作为 CI 工件保留 90 天；summary.json、quality.json、failures.json 归档在仓库的 benchmark-results/ 目录。原始样本 samples.jsonl 的哈希记在 manifest.json 里，文件本身作为 CI 工件保留 90 天（较早的运行仍归档在仓库里）。本站只读取这些文件，不内嵌任何快照。',
 
   'common.yes': '是',
   'common.no': '否',
@@ -581,7 +581,7 @@ const en: Record<MessageKey, string> = {
   'method.noisy.title': 'How noisy is decided',
   'method.noisy.body': 'Before each shard the runner samples five seconds of idle host CPU and sets the limit to max(25%, idle p95 + 10 points), capped at 80%. Stability means three consecutive one-second samples under that limit with steady free memory; a cell that cannot get there within six seconds is marked noisy and retried once. Noisy data is reference only and never ranked. An infra error is a transient host problem such as a monitoring or download timeout, not the engine\'s fault.',
   'method.evidence.title': 'Evidence',
-  'method.evidence.body': 'Screenshots, logs and process traces of every shard are kept as CI artifacts for 90 days; summary.json, samples.jsonl, quality.json and failures.json are archived under benchmark-results/ in the repository. This site only reads those files and embeds no snapshot.',
+  'method.evidence.body': 'Screenshots, logs and process traces of every shard are kept as CI artifacts for 90 days; summary.json, quality.json and failures.json are archived under benchmark-results/ in the repository. The raw samples.jsonl is hashed in manifest.json and kept as a 90-day CI artifact (earlier runs still archive it in the repository). This site only reads those files and embeds no snapshot.',
 
   'common.yes': 'yes',
   'common.no': 'no',

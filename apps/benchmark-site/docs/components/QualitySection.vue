@@ -77,7 +77,13 @@ const warnings = computed(() => {
   return out;
 });
 
+// Runs archived before samples.jsonl stopped being committed list no
+// archived_files and carry all four.
 const PLATFORM_FILES = ['summary.json', 'failures.json', 'quality.json', 'samples.jsonl'];
+const platformFiles = computed(() => {
+  const archived = props.platform.manifest?.archived_files;
+  return archived ? PLATFORM_FILES.filter((name) => archived.includes(name)) : PLATFORM_FILES;
+});
 const RUN_FILES = ['manifest.json', 'report.md', 'report.zh-CN.md', 'summary.csv'];
 
 function platformFile(name: string): string {
@@ -193,7 +199,7 @@ function failureTitle(failure: {
     <div class="quality__files hint">
       <span v-if="summary">
         <span class="label">{{ t('quality.files') }}</span>
-        <el-link v-for="name in PLATFORM_FILES" :key="name" :href="platformFile(name)" target="_blank" type="primary" class="mono">{{ name }}</el-link>
+        <el-link v-for="name in platformFiles" :key="name" :href="platformFile(name)" target="_blank" type="primary" class="mono">{{ name }}</el-link>
       </span>
       <span>
         <span class="label">{{ t('quality.runFiles') }}</span>

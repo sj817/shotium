@@ -456,6 +456,16 @@ jobs:
           path: ${{ steps.aggregate.outputs.result_directory }}
           retention-days: 90
 
+      # The archive commits summaries only; manifest.json records the hash of
+      # each platform's samples.jsonl, and this artifact holds the files.
+      - name: Upload the raw samples
+        if: always() && steps.aggregate.outcome == 'success'
+        uses: actions/upload-artifact@v7
+        with:
+          name: benchmark-samples-${{ github.run_id }}-a${{ github.run_attempt }}
+          path: ${{ runner.temp }}/benchmark-input/**/samples.jsonl
+          retention-days: 90
+
       - name: Commit the immutable result to main
         if: >-
           inputs.commit_results && !cancelled() &&

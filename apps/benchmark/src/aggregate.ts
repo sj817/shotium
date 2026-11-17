@@ -8,6 +8,11 @@ import {isPublishableResult, renderLatest, renderReport, renderSummaryCsv} from 
 import {validatePlatformResult} from './schema.ts';
 
 const PERMANENT_FILES = ['summary.json', 'samples.jsonl', 'quality.json', 'failures.json'] as const;
+// What goes into the repository. samples.jsonl is validated and its hash is
+// recorded in the manifest, but it is not copied: the raw samples were 70% of
+// the committed archive and the site never parses them. benchmark.yml uploads
+// them as a 90-day Actions artifact instead.
+const ARCHIVED_FILES = ['summary.json', 'quality.json', 'failures.json'] as const;
 
 function readJson(file: string): any {
   return JSON.parse(fs.readFileSync(file, 'utf8'));
@@ -205,10 +210,8 @@ export function aggregateResults(options: Record<string, any>) {
     }
     const target = path.join(destination, platform);
     fs.mkdirSync(target, {recursive: true});
-    for (const name of PERMANENT_FILES) {
-      const file = path.join(source, name);
-      if (!fs.existsSync(file)) throw new Error(`${platform} is missing ${name}`);
-      fs.copyFileSync(file, path.join(target, name));
+    for (const name of ARCHIVED_FILES) {
+      fs.copyFileSync(path.join(source, name), path.join(target, name));
     }
     const summary = validatePlatformResult(readJson(summaryFile));
     platforms.push(summary);
@@ -269,6 +272,7 @@ export function aggregateResults(options: Record<string, any>) {
       shards_complete: summary.shards_complete !== false,
       summary_sha256: sha256(summaryFile),
       permanent_sha256: permanentHashes,
+      archived_files: [...ARCHIVED_FILES],
       artifact_error: artifactError,
       evidence_complete: evidenceCompleteForPlatform,
       artifacts,
