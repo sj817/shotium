@@ -22,6 +22,11 @@
 //     bytes get a deterministic timestamp newer than the cached ninja log;
 //     caches without fingerprint state use the legacy DEPS timestamp once.
 //     Restore the build directory before running this script.
+//   * host toolchain files the restored build graph names outside the
+//     workspace (MSVC, the Windows Kits, the Xcode SDK) get the same
+//     comparison, so a runner image that reinstalls them with identical
+//     bytes does not dirty the engine. One this state has not seen keeps
+//     its own time. See HostInputMtimes.
 //
 // The output directory is left alone: its timestamps are what the comparison
 // is against.
@@ -39,7 +44,7 @@ import {execaSync} from 'execa';
 import {globSync} from 'tinyglobby';
 
 import {resolve} from '../lib/repo.ts';
-import {createSourceMtimes, InputMtimes} from '../lib/input-mtimes.ts';
+import {createSourceMtimes, InputMtimes, stampHostInputs} from '../lib/input-mtimes.ts';
 import {createRuntimeFeatureMtimes, isRuntimeFeatureInput} from '../lib/runtime-feature-mtimes.ts';
 
 function git(repo: string, ...args: string[]): string {
@@ -122,6 +127,13 @@ function main(workspaceArg: string, solutionName: string, outDir: string): numbe
     }
   }
   if (counters.failed) throw new Error(`Failed to stamp ${counters.failed} input files`);
+
+  const host = stampHostInputs(buildDir, workspace, head);
+  if (host) {
+    console.log(`host toolchain: ${host.stamped} files stamped from the cached state, ${host.unseen} first seen, ${host.failed} not writable`);
+    if (host.failed) console.log(`::warning::${host.failed} host toolchain files could not be stamped; ninja rebuilds what includes them`);
+  }
+
   sources.save();
   downloaded.save();
   runtimeFeatures.save();

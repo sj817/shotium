@@ -25,6 +25,9 @@
 // the two conversions below were checked against 1,945 records of a real
 // build directory on the development host.
 
+import {existsSync, readFileSync} from 'node:fs';
+import path from 'node:path';
+
 export const DEPS_HEADER = '# ninjadeps\n';
 export const DEPS_VERSION = 4;
 export const LOG_HEADER = '# ninja log v6';
@@ -170,4 +173,73 @@ export function toNinjaTime(mtimeNs: bigint, platform: NodeJS.Platform = process
 export function fromNinjaTime(stamp: bigint, platform: NodeJS.Platform = process.platform): bigint {
   if (platform === 'win32') return (stamp + WINDOWS_EPOCH_SHIFT - UNIX_TO_FILETIME) * 100n;
   return stamp;
+}
+
+// The explicit and implicit inputs of every build statement in a .ninja
+// file: the paths whose modification times can make an output stale.
+// Order-only inputs (after `||`) and validations (after `|@`) never do, and
+// a path written with a variable is skipped; GN writes build statements
+// with literal paths. Escapes: `$ ` space, `$:` colon, `$$` dollar, and `$`
+// before a newline continues the statement on the next line.
+export function buildInputs(text: string): string[] {
+  const inputs: string[] = [];
+  const add = (tokens: string[]) => {
+    // tokens: the rule, then inputs, `|` implicit inputs, `||` order-only.
+    for (const t of tokens.slice(1)) {
+      if (t === '||' || t === '|@') break;
+      if (t !== '|') inputs.push(t);
+    }
+  };
+  for (const line of text.replace(/\$\r?\n[ \t]*/g, '').split(/\r?\n/)) {
+    if (!line.startsWith('build ')) continue;
+    if (!line.includes('$')) {
+      // Nearly every statement: nothing escaped, so split on spaces.
+      const colon = line.indexOf(':');
+      if (colon >= 0) add(line.slice(colon + 1).split(' ').filter(Boolean));
+      continue;
+    }
+    const tokens: string[] = [];
+    let token = '', literal = true, afterColon = false;
+    const end = () => {
+      if (token && literal) tokens.push(token);
+      token = '';
+      literal = true;
+    };
+    for (let i = 'build '.length; i < line.length; i++) {
+      const c = line[i];
+      if (c === '$') {
+        const next = line[++i];
+        if (next === ' ' || next === ':' || next === '$') token += next;
+        else literal = false;
+      } else if (c === ' ') {
+        end();
+      } else if (c === ':' && !afterColon) {
+        end();
+        afterColon = true;
+        tokens.length = 0;
+      } else {
+        token += c;
+      }
+    }
+    end();
+    if (afterColon) add(tokens);
+  }
+  return inputs;
+}
+
+/** The build-statement inputs of the graph build.ninja reaches through subninja and include; stale .ninja files gn left behind are not read. */
+export function graphInputs(buildDir: string): Set<string> {
+  const inputs = new Set<string>();
+  const seen = new Set<string>();
+  const queue = ['build.ninja'];
+  for (let rel = queue.pop(); rel !== undefined; rel = queue.pop()) {
+    if (seen.has(rel)) continue;
+    seen.add(rel);
+    const file = path.join(buildDir, rel);
+    if (!existsSync(file)) continue;
+    const text = readFileSync(file, 'utf8');
+    for (const m of text.matchAll(/^(?:subninja|include) +(\S.*?)\r?$/gm)) queue.push(m[1].replace(/\$(.)/g, '$1'));
+    for (const input of buildInputs(text)) inputs.add(input);
+  }
+  return inputs;
 }
