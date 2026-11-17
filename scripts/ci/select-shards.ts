@@ -21,7 +21,7 @@ import path from 'node:path';
 
 import {execa} from 'execa';
 
-import {type BuildIndex, estimate, parseIndex, shardsFor} from '../lib/build-index.ts';
+import {type BuildIndex, estimate, parseIndex, sameGnStatements, shardsFor} from '../lib/build-index.ts';
 import {platformByLabel} from '../lib/platforms.ts';
 import {resolve} from '../lib/repo.ts';
 import {environment, findBuildDirs, names} from './engine-artifacts.ts';
@@ -156,12 +156,27 @@ export function outputs(selection: Selection): string {
 // needs only that commit's trees: fetch it shallow and without blobs. A
 // commit GitHub no longer serves (its branch was force-pushed or deleted)
 // is unreachable, not an error.
+//
+// A .gn or .gni file whose two versions differ only in comment lines and
+// blank lines generates the same ninja files, so it is left out. Reading
+// the two versions fetches just those blobs from the promisor remote.
 async function changedInputs(headSha: string): Promise<string[]|null> {
   const cwd = resolve();
   const fetched = await execa('git', ['--no-optional-locks', 'fetch', '--quiet', '--depth=1', '--filter=blob:none', 'origin', headSha], {cwd, reject: false});
   if (fetched.exitCode !== 0) return null;
   const {stdout} = await execa('git', ['--no-optional-locks', 'diff-tree', '-r', '-z', '--name-only', '--no-renames', 'HEAD', headSha], {cwd, stripFinalNewline: false});
-  return stdout.split('\0').filter((file) => file && isEngineInput(file));
+  const changed = stdout.split('\0').filter((file) => file && isEngineInput(file));
+  const show = (rev: string, file: string) =>
+    execa('git', ['--no-optional-locks', 'show', `${rev}:${file}`], {cwd, reject: false, stripFinalNewline: false});
+  const kept: string[] = [];
+  for (const file of changed) {
+    if (/\.gni?$/.test(file)) {
+      const [before, after] = await Promise.all([show(headSha, file), show('HEAD', file)]);
+      if (before.exitCode === 0 && after.exitCode === 0 && sameGnStatements(before.stdout, after.stdout)) continue;
+    }
+    kept.push(file);
+  }
+  return kept;
 }
 
 async function downloadIndex(runId: number, label: string): Promise<BuildIndex|null> {

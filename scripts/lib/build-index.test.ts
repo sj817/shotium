@@ -8,7 +8,7 @@ import {tmpdir} from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 
-import {type BuildIndex, NEW_SOURCE_MS, buildIndex, estimate, parseIndex, shardsFor, sourcePath} from './build-index.ts';
+import {type BuildIndex, NEW_SOURCE_MS, buildIndex, estimate, parseIndex, sameGnStatements, shardsFor, sourcePath} from './build-index.ts';
 import {LOG_HEADER, formatDeps, formatLog} from './ninja-state.ts';
 
 function directory(): string {
@@ -76,6 +76,12 @@ test('pricing: known sources add up, unknown headers are free, new sources cost 
   assert.deepEqual(estimate(INDEX, ['shot/BUILD.gn', 'shot/a.cc']), {ms: null, unknown: ['shot/BUILD.gn']});
   assert.deepEqual(estimate(INDEX, ['third_party/blink/renderer/platform/runtime_enabled_features.json5']).ms, null);
   assert.deepEqual(estimate(INDEX, ['DEPS']).ms, null);
+  // Tooling compiles nothing, except what writes build inputs or mtimes.
+  assert.deepEqual(estimate(INDEX, ['package.json', 'scripts/verify/bilibili.ts', 'scripts/ci/select-shards.ts', 'shot/a.cc']), {ms: 10_000, unknown: []});
+  assert.deepEqual(estimate(INDEX, ['scripts/ci/stamp-mtimes.ts']), {ms: null, unknown: ['scripts/ci/stamp-mtimes.ts']});
+  assert.deepEqual(estimate(INDEX, ['scripts/build/icu-repack.ts']).ms, null);
+  assert.deepEqual(estimate(INDEX, ['apps/typescript/package.json']).ms, null);
+  assert.deepEqual(estimate(INDEX, ['shot/README.md', 'third_party/zlib/README.shotium.md']), {ms: 0, unknown: []});
   // The sum is capped at one cold build.
   assert.equal(estimate({...INDEX, total_ms: 12_000}, ['shot/common.h']).ms, 12_000);
   // A directory whose run did not link prices nothing, however small the diff.
@@ -93,4 +99,13 @@ test('runners: one per tenth of a cold build, never below one nor above the defa
   assert.equal(shardsFor(60_001, INDEX, 2), 2);
   assert.equal(shardsFor(0, INDEX, 1), 1);
   assert.equal(shardsFor(100, {...INDEX, total_ms: 0}, 3), 3, 'a directory with no logged work cannot be priced against');
+});
+
+test('a GN edit that only touches comment lines and blank lines is inert', () => {
+  const before = '# Old comment.\nsource_set("a") {\n  sources = [ "a.cc" ]\n}\n';
+  assert.equal(sameGnStatements(before, '# New comment,\n# two lines.\n\nsource_set("a") {\n  sources = [ "a.cc" ]\n}\n'), true);
+  assert.equal(sameGnStatements(before, before.replace(/\n/g, '\r\n')), true);
+  assert.equal(sameGnStatements(before, before.replace('a.cc', 'b.cc')), false);
+  assert.equal(sameGnStatements(before, before.replace('[ "a.cc" ]', '[ "a.cc" ]  # trailing')), false);
+  assert.equal(sameGnStatements(before, `${before}is_debug = false\n`), false);
 });
