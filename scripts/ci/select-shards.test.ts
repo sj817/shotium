@@ -100,7 +100,16 @@ test('the cheapest directory wins over the newest; ties go to the closer tree, t
     [candidate(9), candidate(5)], {sha9: ['shot/BUILD.gn'], sha5: ['third_party/blink/renderer/core/dom/document.h']},
   )});
   assert.deepEqual([priced.count, priced.buildDirRunId], [3, 5]);
-  // Two unpriced: the newest.
+  // Two unpriced: the closer tree, then the newer one; an undiffable commit is farthest.
+  const closest = await select({requested: 'auto', target: 'windows-amd64', fingerprint: 'abc', ...sources(
+    [candidate(9, {branch: 'ci/x'}), candidate(5, {branch: 'deps/rewrite'})],
+    {sha9: ['DEPS', '.gitmodules', 'scripts/ci/stamp-mtimes.ts', 'third_party/a/a.cc'], sha5: ['scripts/ci/stamp-mtimes.ts']},
+  )});
+  assert.deepEqual([closest.count, closest.buildDirRunId], [3, 5]);
+  const unreachable = await select({requested: 'auto', target: 'windows-amd64', fingerprint: 'abc', ...sources(
+    [candidate(9), candidate(5)], {sha9: null, sha5: ['DEPS', '.gitmodules']},
+  )});
+  assert.equal(unreachable.buildDirRunId, 5);
   const unpriced = await select({requested: 'auto', target: 'windows-amd64', fingerprint: 'abc', ...sources(
     [candidate(5), candidate(9)], {sha9: ['DEPS'], sha5: ['DEPS']},
   )});
