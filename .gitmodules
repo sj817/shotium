@@ -1,76 +1,20 @@
-[submodule "third_party/compiler-rt/src"]
-	path = third_party/compiler-rt/src
-	url = https://chromium.googlesource.com/external/github.com/llvm/llvm-project/compiler-rt
-[submodule "third_party/libc++/src"]
-	path = third_party/libc++/src
-	url = https://chromium.googlesource.com/external/github.com/llvm/llvm-project/libcxx
-[submodule "third_party/libc++abi/src"]
-	path = third_party/libc++abi/src
-	url = https://chromium.googlesource.com/external/github.com/llvm/llvm-project/libcxxabi
 [submodule "third_party/libunwind/src"]
 	path = third_party/libunwind/src
 	url = https://chromium.googlesource.com/external/github.com/llvm/llvm-project/libunwind
 	gclient-condition = checkout_linux
-[submodule "third_party/llvm-libc/src"]
-	path = third_party/llvm-libc/src
-	url = https://chromium.googlesource.com/external/github.com/llvm/llvm-project/libc
-[submodule "net/third_party/quiche/src"]
-	path = net/third_party/quiche/src
-	url = https://quiche.googlesource.com/quiche
-[submodule "third_party/highway/src"]
-	path = third_party/highway/src
-	url = https://chromium.googlesource.com/external/github.com/google/highway
-[submodule "third_party/boringssl/src"]
-	path = third_party/boringssl/src
-	url = https://boringssl.googlesource.com/boringssl
 [submodule "third_party/ced/src"]
 	path = third_party/ced/src
 	url = https://chromium.googlesource.com/external/github.com/google/compact_enc_det
 [submodule "third_party/depot_tools"]
 	path = third_party/depot_tools
 	url = https://chromium.googlesource.com/chromium/tools/depot_tools
-[submodule "third_party/fontconfig/src"]
-	path = third_party/fontconfig/src
-	url = https://chromium.googlesource.com/external/fontconfig
-	gclient-condition = checkout_linux
-[submodule "third_party/freetype/src"]
-	path = third_party/freetype/src
-	url = https://chromium.googlesource.com/chromium/src/third_party/freetype2
-[submodule "third_party/harfbuzz/src"]
-	path = third_party/harfbuzz/src
-	url = https://chromium.googlesource.com/external/github.com/harfbuzz/harfbuzz
 [submodule "third_party/emoji-segmenter/src"]
 	path = third_party/emoji-segmenter/src
 	url = https://chromium.googlesource.com/external/github.com/google/emoji-segmenter
-[submodule "third_party/ots/src"]
-	path = third_party/ots/src
-	url = https://chromium.googlesource.com/external/github.com/khaledhosny/ots
-[submodule "third_party/gperf"]
-	path = third_party/gperf
-	url = https://chromium.googlesource.com/chromium/deps/gperf
-	gclient-condition = checkout_win
-[submodule "third_party/expat/src"]
-	path = third_party/expat/src
-	url = https://chromium.googlesource.com/external/github.com/libexpat/libexpat
-[submodule "third_party/libjpeg_turbo"]
-	path = third_party/libjpeg_turbo
-	url = https://chromium.googlesource.com/chromium/deps/libjpeg_turbo
-[submodule "third_party/libwebp/src"]
-	path = third_party/libwebp/src
-	url = https://chromium.googlesource.com/webm/libwebp
 [submodule "third_party/lss"]
 	path = third_party/lss
 	url = https://chromium.googlesource.com/linux-syscall-support
 	gclient-condition = checkout_android or checkout_linux
-[submodule "third_party/material_color_utilities/src"]
-	path = third_party/material_color_utilities/src
-	url = https://chromium.googlesource.com/external/github.com/material-foundation/material-color-utilities
-[submodule "third_party/nasm"]
-	path = third_party/nasm
-	url = https://chromium.googlesource.com/chromium/deps/nasm
 [submodule "third_party/re2/src"]
 	path = third_party/re2/src
 	url = https://chromium.googlesource.com/external/github.com/google/re2
-[submodule "third_party/wuffs/src"]
-	path = third_party/wuffs/src
-	url = https://skia.googlesource.com/external/github.com/google/wuffs-mirror-release-c

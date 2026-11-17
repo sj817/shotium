@@ -17,10 +17,11 @@ basic/layout/paint/text 四组与升级前二进制的像素及哈希完全一�
 七个 npm 包及六个 GitHub 二进制附件已核对。不恢复被裁剪的浏览器功能。
 各平台执行了其工作流支持的检查；交叉编译不等于原生设备运行验收。
 
-发布证据与 CI 分片问题记录见 [0.6.0 验收记录](upstream-sync-0.6.0-validation.md)。
-
-具体源码决策见 [155 同步记录](upstream-sync-decisions-155.json)。这份记录包括
-固定上游提交、保留产品差异的原因以及新增/退役路径，不是补丁重放队列。
+0.6.0 的发布证据、CI 分片问题记录，以及逐路径的源码决策（固定上游提交、
+保留产品差异的原因、新增/退役路径）只留在提交历史里：
+`git log -- apps/docs/upstream-sync-0.6.0-validation.md apps/docs/upstream-sync-decisions-155.json`。
+决策文件是那一轮 `pnpm upstream:sync` 的输入，不是补丁重放队列；下一轮按
+[批量同步工具](upstream-sync-tool.md) 重新生成。
 
 下方旧统计与 `out/ShotWip` 命令属于历史记录；执行时以当前 CLAUDE.md、
 build-engine/verify-engine 流程为准，Windows 构建入口为
@@ -30,6 +31,18 @@ ICU、Skia、Perfetto 现在由本仓直接维护。更新它们时按各目录 
 记录的上游版本审查差异，直接修改源码；不恢复它们的 DEPS/gitlink 或补丁重放。
 原 ICU 功能裁剪、Skia 并行模糊/逐行解码限制、Perfetto trace processor 开关均已
 保留在对应源码中。外部依赖的其他 DEPS 条目仍按本文同步。
+
+0.12.4 之后，另外 18 个原 DEPS 检出也改成本仓维护的源码切片，只保留八个平台
+构建图读到的文件（734 MiB → 57 MiB）：boringssl、expat、harfbuzz、libc++、
+libc++abi、llvm-libc、compiler-rt、ots、quiche、nasm、freetype、highway、
+libwebp、libjpeg_turbo、wuffs、material_color_utilities、fontconfig、gperf。
+上游版本记在各自的 README.shotium.md；升级时用
+`pnpm upstream:sync plan --upstream-prefix <目录> --retained-only` 只比对保留的
+文件。DEPS 里对应的 `*_revision` 变量已无人引用，按 prune-deps 的约定保留。
+libc++、libc++abi、llvm-libc、compiler-rt 与 `third_party/llvm-build` 的 clang
+版本绑定，换编译器时要一起升级。仍由 DEPS 拉取的 git 依赖只剩 depot_tools
+（gclient hooks 调它下载 rc.exe/dsymutil）、re2、ced、lss、emoji-segmenter、
+libunwind、libdrm，以及 CIPD/GCS 的工具链包。
 
 ### CPU 绘制差异：背景滤镜和 CSS 3D（2026-10-11）
 
@@ -218,6 +231,8 @@ xargs -a /tmp/ours.txt git log --oneline $OLD..$NEW --
 | `core/frame/local_frame.{h,cc}` `ForceSynchronousDocumentInstall` / `shot/shot_renderer.cc` | 多一个带 `encoding` 形参的重载，shot 把 Content-Type 的 charset 作为 header 编码传进去；上游三个重载不变，仍写死 UTF-8 | 上游这条路只给 SVG 图片和内部页用，写死 UTF-8 没问题；shot 用它装顶层文档，写死意味着 BOM、header charset、`<meta charset>` 全部被忽略（`pnpm verify:charset` 之前 11 个用例全是 mojibake）。传 header 编码后优先级就是浏览器的：BOM > header > meta > CED 嗅探 > 顶级域默认 > Settings 默认 |
 | `build/args/shot.gn` `include_transport_security_state_preload_list = false`；`net/tools/{transport_security_state_generator,huffman_trie}` 与 `net/http/transport_security_state_static.*` 只留 BUILD.gn；`net/http/BUILD.gn` 的三个 `compiled_action` 和 `net/BUILD.gn` 里测试目标对它们的 deps 都套在 `if (include_transport_security_state_preload_list)` 里 | 不带 HSTS 预加载表和公钥 pin；生成器的 action 只在要表时定义 | Cronet 的既有配置，`transport_security_state.cc` 里 `DecodeHSTSPreload` 直接返回 false。action 必须一起套条件：上游只是不 dep 它，但一条没人引用的 action 只要输入文件不在、而旧 `.ninja_deps` 里还记着它的输出，ninja 就报 missing and no known rule。0.77 MB 纯数据，外加每次冷构建都要编一遍的宿主工具（含宿主工具链的 BoringSSL）和 10.5 MB 的 JSON。差别只在页面写 `http://` 引用预加载域名时多一次 301 往返；同进程内见过的 Strict-Transport-Security 头仍生效 |
 | `platform/fonts/skia/font_cache_skia.cc` `FontCache::CreateTypeface`；`platform/fonts/linux/font_unique_name_lookup_linux.cc` `MatchUniqueName` | 按 fontconfig id 创建字体的分支改成「有文件路径就按路径打开，没有才按 id」；上游是「有 WebSandboxSupport 就按 id」 | Chrome 的渲染进程开不了字体文件，id 由浏览器进程的字体服务分配；shot 的 `ShotSandboxSupport`（v0.10.0 为了 `local()` 加的）在进程内查 fontconfig，填的是真实路径，id 永远是 0。按上游的分支走，`SkFontConfigInterfaceDirect::openStream("")` 返回空，系统回退字体全部创建失败：Linux 上主字体没有的 CJK 全是方框、emoji 全是空白，v0.10.0 到 v0.11.1 都如此。`verify:charset`、`verify:demos` 这类比较式检查看不出来，方框等于方框；`pnpm verify:fonts` 专门守这条 |
+| `net/BUILD.gn` / `net/dns/BUILD.gn` `enable_built_in_dns`；`net/dns/resolve_context.cc` `kDefaultCacheSize` | shot 下 `enable_built_in_dns = use_blink && !is_shot_build`（iOS 用的同一个开关）；主机缓存不再按这个宏分 1000/100，固定 1000 | `HostResolver::ManagerOptions` 默认 `insecure_dns_mode = kDisabled`，shot 也不配 DoH，内置的 DnsClient 被创建但从来不解析任何东西，却让 DnsTransaction、DoH 探测、DoH 提供方表一直可达。去掉后解析仍走系统解析器、仍进 HostCache；缓存保持桌面的 1000 条，常驻进程见过的主机多于 100 个时不会多出解析。Windows 实测 −111 KB，`verify:net`（含真实 https）通过 |
+| `core/dom/document.cc` `Document::CreateParser`、`setXMLVersion`；`core/dom/processing_instruction.cc`；`core/dom/document_fragment.cc` `ParseXML`；`core/svg/svg_use_element.cc`；`core/xml/parser/xml_document_parser_rs.cc`；删除 `core/xml/parser/xml_document_parser.{h,cc}`、`xml_document_parser_scope.{h,cc}`、`core/dom/transform_source{.h,_libxslt.cc}`；`core/BUILD.gn` 不再依赖 `//third_party/libxml` | 所有 XML 文档都交给 Rust 解析器（上游只有 `XMLParsingRust` 开着时才这样，框架里的文档默认还走 libxml）；`<?xml-stylesheet?>` 属性用 `ParseAttributesRust`；XML 片段解析只保留 script/style 的纯文本捷径，其余报不合法；`IsCAPAlertNamespace` 搬进 Rust 解析器 | 上游让框架里的文档留在 libxml 是因为只有 libxml 能喂 XSLT，而本树的 XSLT 早已是空实现。XML 片段解析只有脚本（innerHTML 等）和粘贴编辑能触发，两者都不存在。Blink 不再链接 libxml，Windows/mac 上 libxml 整个离开镜像（Windows 实测 −256 KB）；Linux 的 fontconfig 仍依赖 `//third_party/libxml`，目录保留。6 个 XHTML/XML 样例（实体、CJK、内联 SVG/MathML、xml-stylesheet、GBK 声明、格式错误）新旧逐像素一致。`runtime_enabled_features.json5` 没改：`XMLParsingRust` 现在只剩 Rust 解析器构造函数里的 CHECK 读它，而那个 CHECK 靠 stable 的 `XMLRustForNonXslt` 成立 |
 
 ### 4.5 上游新增的文件
 
@@ -228,7 +243,7 @@ git diff --diff-filter=A --name-only $OLD $NEW | grep -E '^(base|build|cc|net|th
 ```
 
 一个一个看要不要。默认答案是**不要** —— 这棵树的默认动作是删,不是加。
-见 `docs/cut-progress.md`。
+判据见 [cut-component](../../.claude/skills/cut-component/SKILL.md)。
 
 ### 4.6 上游已经删掉的
 

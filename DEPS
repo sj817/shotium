@@ -902,68 +902,20 @@ deps = {
     'condition': 'host_os == "win"',
   },
 
-  'src/third_party/compiler-rt/src':
-    Var('chromium_git') +
-    '/external/github.com/llvm/llvm-project/compiler-rt.git' + '@' +
-    Var('compiler_rt_revision'),
-  'src/third_party/libc++/src':
-    Var('chromium_git') +
-    '/external/github.com/llvm/llvm-project/libcxx.git' + '@' +
-    Var('libcxx_revision'),
-  'src/third_party/libc++abi/src':
-    Var('chromium_git') +
-    '/external/github.com/llvm/llvm-project/libcxxabi.git' + '@' +
-    Var('libcxxabi_revision'),
   'src/third_party/libunwind/src': {
     'url': Var('chromium_git') +
         '/external/github.com/llvm/llvm-project/libunwind.git' + '@' +
         Var('libunwind_revision'),
     'condition': 'checkout_linux',
   },
-  'src/third_party/llvm-libc/src':
-    Var('chromium_git') +
-    '/external/github.com/llvm/llvm-project/libc.git' + '@' +
-    Var('llvm_libc_revision'),
-
-  'src/net/third_party/quiche/src':
-    Var('quiche_git') + '/quiche.git' + '@' +  Var('quiche_revision'),
-
-
-  'src/third_party/highway/src':
-    Var('chromium_git') + '/external/github.com/google/highway.git' + '@' + Var('highway_revision'),
-
-  'src/third_party/boringssl/src':
-    Var('boringssl_git') + '/boringssl.git' + '@' +  Var('boringssl_revision'),
-
   'src/third_party/ced/src':
     Var('chromium_git') + '/external/github.com/google/compact_enc_det.git' + '@' + 'd127078cedef9c6642cbe592dacdd2292b50bb19',
 
   'src/third_party/depot_tools':
     Var('chromium_git') + '/chromium/tools/depot_tools.git' + '@' + 'ed9c87f6f12f6b87210e7025d4a36a5a72a2ccd4',
 
-  'src/third_party/fontconfig/src': {
-      'url': Var('chromium_git') + '/external/fontconfig.git' + '@' + 'd17ee184e436712c2abbe14a9c0ec02fb6acf5c5',
-      'condition': 'checkout_linux',
-  },
-
-  'src/third_party/freetype/src':
-    Var('chromium_git') + '/chromium/src/third_party/freetype2.git' + '@' + Var('freetype_revision'),
-
-
-  'src/third_party/harfbuzz/src':
-    Var('chromium_git') + '/external/github.com/harfbuzz/harfbuzz.git' + '@' + Var('harfbuzz_revision'),
-
   'src/third_party/emoji-segmenter/src':
     Var('chromium_git') + '/external/github.com/google/emoji-segmenter.git' + '@' + Var('emoji_segmenter_revision'),
-
-  'src/third_party/ots/src':
-    Var('chromium_git') + '/external/github.com/khaledhosny/ots.git' + '@' + Var('ots_revision'),
-
-  # TODO: crbug.com/431264806 - Switch to CIPD package for Windows builds.
-  'src/third_party/gperf': {
-      'url': Var('chromium_git') + '/chromium/deps/gperf.git' + '@' + 'e9eeea862a18e77b945d98eff7e1bf065d3daf8e',
-      'condition': 'checkout_win',
-  },
 
   'src/third_party/gperf/cipd': {
       'packages': [
@@ -995,29 +947,9 @@ deps = {
       'condition': 'checkout_linux',
   },
 
-  'src/third_party/expat/src':
-    Var('chromium_git') + '/external/github.com/libexpat/libexpat.git' + '@' + Var('libexpat_revision'),
-
-  'src/third_party/libjpeg_turbo':
-    Var('chromium_git') + '/chromium/deps/libjpeg_turbo.git' + '@' + '640f254ad0fa03f6b1f29f89b7dd9366f2f6e533',
-
-
-
-  'src/third_party/libwebp/src':
-    Var('chromium_git') + '/webm/libwebp.git' + '@' +  'b43b2caa710c0c997c066cb32c7fea1391fad70a',
-
   'src/third_party/lss': {
       'url': Var('chromium_git') + '/linux-syscall-support.git' + '@' + Var('lss_revision'),
       'condition': 'checkout_android or checkout_linux',
-  },
-
-  'src/third_party/material_color_utilities/src': {
-      'url': Var('chromium_git') + '/external/github.com/material-foundation/material-color-utilities.git' + '@' + '5b3618b16fdc3825e21d5679bafd144662088ea1',
-  },
-
-  'src/third_party/nasm': {
-      'url': Var('chromium_git') + '/chromium/deps/nasm.git' + '@' +
-      '525a09a813be0f75b646ee93fc2a31c27b87d722'
   },
 
   'src/third_party/ninja': {
@@ -1036,19 +968,6 @@ deps = {
   'src/third_party/re2/src':
     Var('chromium_git') + '/external/github.com/google/re2.git' + '@' + '972a15cedd008d846f1a39b2e88ce48d7f166cbd',
 
-
-
-
-  # Wuffs' canonical repository is at github.com/google/wuffs, but we use
-  # Skia's mirror of Wuffs, the same as in upstream Skia's DEPS file.
-  #
-  # The local directory is called "third_party/wuffs" (matching upstream Skia
-  # and other non-Chromium, Skia-using projects) even though the git repo we
-  # clone is called "wuffs-mirror-release-c". The reasons for using w-m-r-c are
-  # listed in the https://crrev.com/c/3086053 commit message. One reason is
-  # that the w-m-r-c subset is much smaller and changes much less frequently.
-  'src/third_party/wuffs/src':
-    Var('skia_git') + '/external/github.com/google/wuffs-mirror-release-c.git' + '@' +  Var('wuffs_revision'),
 
 }
 

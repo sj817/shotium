@@ -9,6 +9,7 @@
 #include <string>
 #include <vector>
 
+#include "base/functional/callback.h"
 #include "base/types/expected.h"
 #include "shot/shot_capture_context.h"
 #include "shot/shot_bytes.h"
@@ -69,6 +70,25 @@ base::expected<CaptureResult, std::string> CaptureAndDeliver(
     ShotRuntime& runtime,
     const ScreenshotRequest& request,
     CaptureStats* out_stats = nullptr);
+
+// CaptureAndDeliver(), with the raster allowed to finish after this returns.
+//
+// The document is fetched, laid out and painted here, on the runtime's
+// thread, as CaptureAndDeliver() does. A capture the renderer can hand over
+// (ShotRenderer::RenderPipelined) is then rastered on the raster lane while
+// this thread goes on to the next request, and `done` runs on the lane when
+// the image is out; any other capture finishes here and `done` runs before
+// this returns, once the lane has answered the capture before it: answers
+// leave in the order the captures were made. Either way it runs exactly
+// once, with the statistics of the whole capture: the lane's raster and
+// encode added to what this thread measured, and `total` measured to the
+// moment the image was ready.
+using CaptureDone =
+    base::OnceCallback<void(base::expected<CaptureResult, std::string>,
+                            CaptureStats)>;
+void CaptureAndDeliverPipelined(ShotRuntime& runtime,
+                                const ScreenshotRequest& request,
+                                CaptureDone done);
 
 // One tile of a tiles capture, as handed to a caller.
 struct DeliveredTile {

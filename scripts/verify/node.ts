@@ -88,6 +88,32 @@ async function main(exeArg: string): Promise<number> {
   const fromExe = readFileSync(output);
   check(sha(fromExe) === sha(first!), 'byte for byte what the executable makes', sha(first!).slice(0, 16));
 
+  checks.section('captures in flight together match captures one at a time');
+  // A viewport capture is rastered on the engine's raster lane while the next
+  // document is laid out (ShotRenderer::RenderPipelined), and screenshot()
+  // hands every request to the engine as soon as it is made. Overlapping
+  // them must not change a byte, nor let one request's failure or a capture
+  // that finishes on the engine thread -- a full page, a scaled one --
+  // disturb the others.
+  const lane = [
+    request,
+    {...request, type: 'jpeg' as const, quality: 80},
+    {file: features, viewport: {width: 400, height: 300}, allowFileAccess: true, type: 'webp' as const},
+    {file: features, viewport: {width: 400, height: 300}, allowFileAccess: true, fullPage: true},
+    {...request, scale: 2},
+  ];
+  const alone: string[] = [];
+  for (const options of lane) {
+    alone.push(sha((await shotium.screenshot(options)).image!));
+  }
+  const missing = {file: resolve('shot/testdata/does-not-exist.html'), allowFileAccess: true};
+  const together = await Promise.allSettled([...lane, missing, ...lane, ...lane].map((options) => shotium.screenshot(options)));
+  const hashes = together.map((settled) => settled.status === 'fulfilled' ? sha(settled.value.image!) : 'rejected');
+  const expected = [...alone, 'rejected', ...alone, ...alone];
+  check(hashes.every((hash, i) => hash === expected[i]),
+        `${together.length} captures submitted at once give the bytes each gave alone`,
+        hashes.map((hash, i) => hash === expected[i] ? '=' : 'x').join(''));
+
   checks.section('the geometry options reach the engine');
   const {image: clipped} = await shotium.screenshot({file: features, viewport: {width: 400, height: 300}, clip: {x: 40, y: 60, width: 200, height: 120}, allowFileAccess: true});
   check(clipped!.readUInt32BE(16) === 200 && clipped!.readUInt32BE(20) === 120, 'clip arrives as a 200x120 image', `${clipped!.readUInt32BE(16)}x${clipped!.readUInt32BE(20)}`);

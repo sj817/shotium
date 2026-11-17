@@ -132,7 +132,9 @@ export function report(files: string[], output: string, platforms: Set<string> =
         '| 场景 | 样本对 | npm p50 / p95 / mean ms | 本地 dev p50 / p95 / mean ms | 比值区间 p50 / mean / p95 | 状态 |', '|---|---:|---:|---:|---|---|');
     for (const c of cases) {
       const summary = c.summary;
-      const wall = c.metrics?.wall;
+      // A cold start's headline is time to first image; its parts follow.
+      const primary = c.metrics?.firstImageMs ? 'firstImageMs' : 'wall';
+      const wall = c.metrics?.[primary];
       const numbers = (values?: Summary) => values ? ['p50', 'p95', 'mean'].map((k) => f3(values[k as keyof Summary])).join(' / ') : '—';
       const spans = () => {
         const intervals = wall?.intervals;
@@ -142,7 +144,7 @@ export function report(files: string[], output: string, platforms: Set<string> =
       const pairs = wall?.samples ?? '—';
       lines.push(`| ${c.name} | ${pairs} | ${numbers(summary?.baseline)} | ${numbers(summary?.candidate)} | ${spans()} | ${c.status} |`);
       for (const [key, metric] of Object.entries(c.metrics ?? {})) {
-        if (key === 'wall') continue;
+        if (key === primary) continue;
         lines.push(`| ↳ ${key} | — | ${numbers(metric.summary.baseline)} | ${numbers(metric.summary.candidate)} | — | ${metric.status} |`);
       }
     }

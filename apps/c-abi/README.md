@@ -70,7 +70,7 @@ if ((Get-FileHash shotium-c-abi-windows-amd64.7z -Algorithm SHA256).Hash.ToLower
 Because Blink operates as a process-level singleton, callers must observe the following constraints:
 
 - **Single engine instance per process lifecycle**: Recreating an engine after destroying one is not supported; subsequent calls to `shot_engine_create()` will return `SHOT_ERR_STATE`; applications should reuse a single engine instance for captures and spawn additional worker processes if concurrency or isolation is needed
-- **Thread-safe sequential dispatch**: `shot_engine_capture()` can be invoked concurrently from any thread; incoming requests are internally serialized onto the engine thread; host applications using event loops should invoke capture calls on worker threads to avoid blocking the event loop
+- **Thread-safe dispatch**: `shot_engine_capture()` can be invoked concurrently from any thread; incoming requests are queued onto the engine thread, which lays out one document at a time, while a viewport-sized capture's rasterisation and encoding run on a separate raster thread alongside the next document's layout, so concurrent callers get more captures per second than one caller calling in a loop; host applications using event loops should invoke capture calls on worker threads to avoid blocking the event loop
 - **Rendering constraints**: JavaScript execution is disabled in rendered pages; top-level `data:` URLs are not supported as the primary document URL; callers should save HTML content to local files or serve them over HTTP/HTTPS
 
 ## Buffers and ownership
@@ -231,7 +231,7 @@ When specifying `path` for tiled captures, the template string must include `{n}
 
 `shot_engine_status(engine, &json, &error)` returns engine runtime information formatted as `{"cacheDir": string | null, "cacheActive": boolean}`; if `cacheActive` is `false` despite a configured `cacheDir`, the directory could not be initialized and the engine operates without caching; multiple processes may safely share the same cache directory
 
-`shot_engine_purge(engine, release_working_set)` triggers resource reclamation, clearing Blink GC objects, Skia font/glyph caches, and internal allocator pools; if `release_working_set` is non-zero, it additionally requests the operating system to reclaim physical memory pages; it is recommended to invoke purge after completing a batch workload rather than between every single capture
+`shot_engine_purge(engine, release_working_set)` triggers resource reclamation, clearing Blink GC objects, Skia font/glyph caches, the decoded web fonts kept between captures, and internal allocator pools; if `release_working_set` is non-zero, it additionally requests the operating system to reclaim physical memory pages; it is recommended to invoke purge after completing a batch workload rather than between every single capture. The engine releases memory by itself after 2 seconds without a request, but that automatic release keeps the decoded web fonts and the glyph cache so the next capture is not slower; only this call clears them
 
 ## HTTP cache
 

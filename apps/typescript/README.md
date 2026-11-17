@@ -119,7 +119,7 @@ process.on('SIGTERM', async () => {
 });
 ```
 
-**Process-level singleton constraint**: Blink maintains process-wide global state that cannot be re-initialised. All `screenshot()` calls within a single process share this instance and execute sequentially via an internal rendering queue. To parallelise rendering across multiple CPU cores, run multiple Node.js worker processes (e.g., using Node cluster or a process manager like PM2)
+**Process-level singleton constraint**: Blink maintains process-wide global state that cannot be re-initialised. All `screenshot()` calls within a single process share this instance and are queued in the engine. Blink lays out one document at a time, but a viewport-sized capture is rasterised and encoded on a separate raster thread while the next document is being laid out, so issuing several `screenshot()` calls at once (rather than awaiting each in turn) raises one process's throughput by roughly 1.2–2×, depending on how much of each page's time is rasterisation. Results are identical either way. Beyond that, to use more CPU cores, run multiple Node.js worker processes (e.g., using Node cluster or a process manager like PM2)
 
 ### Resident daemon for short-lived processes
 
@@ -276,7 +276,7 @@ Renders the region `fullPage`, `selector`, `clip` or the viewport would have pro
 | `start(options?: StartOptions)` | `StartResult` | Initialises the engine, or safely reuses the running instance. Throws if options conflict with the already initialised engine configuration |
 | `status()` | `StartResult` | Returns current engine operational status and configuration |
 | `stop()` | `Promise<void>` | Drains the capture queue, frees temporary caches, and stops accepting new requests. Underlying Blink remains initialised and disk cache is retained; subsequent calls safely reuse this engine instance |
-| `releaseMemory(options?: ReleaseMemoryOptions)` | `void` | Triggers Blink garbage collection, clears Skia raster caches and the decoded web fonts the engine keeps between captures (up to 64 MB, keyed by the font bytes), and trims allocator free lists. When `releaseWorkingSet: true` is set, requests the OS to reclaim physical memory pages (without modifying disk cache) |
+| `releaseMemory(options?: ReleaseMemoryOptions)` | `void` | Triggers Blink garbage collection, clears Skia raster caches and the decoded web fonts the engine keeps between captures (up to 24 MB, keyed by the font bytes), and trims allocator free lists. When `releaseWorkingSet: true` is set, requests the OS to reclaim physical memory pages (without modifying disk cache). The engine also releases memory by itself after 2 seconds without a request, and returns its working set after 10 more; that automatic release keeps the decoded web fonts and the glyph cache, so the first capture after a pause is not slower than the one before it. Only this call clears those as well |
 
 `shotium.running` on the default export (or `status().running`) indicates whether the engine is ready and accepting capture tasks
 
@@ -672,7 +672,7 @@ export interface CacheClearResult {
 
 - **No JavaScript execution**: V8 is completely omitted from the build; `<script>` tags are ignored. Inputs must be fully prepared HTML (e.g., SSR output, template engine output, or static markup)
 - **No `data:` URL as the main document**: Main documents must be supplied as local file paths, stdin streams, or HTTP(S) URLs
-- **Single engine instance per process**: Blink maintains process-wide global state and cannot be re-initialised. Captures run sequentially through an internal worker queue. For multi-core scaling, deploy multiple processes or use independently named daemons
+- **Single engine instance per process**: Blink maintains process-wide global state and cannot be re-initialised. Captures are queued in the engine; one document is laid out at a time, while the previous viewport-sized capture rasterises on a separate thread. For multi-core scaling, deploy multiple processes or use independently named daemons
 - **Raster coordinate limits**: Blink paints up to 32,767 CSS pixels per viewport window; taller documents are handled via automatic internal scroll-paging (abstracted by `fullPage` and `screenshotTiles()`). Single image output is bounded by codec formats: 65,535 pixels per dimension for PNG and JPEG, and 16,383 pixels for WebP
 
 ## License

@@ -67,6 +67,22 @@ native.capture(engine, request).then(result => {
   assert.throws(() => native.capture(engine, request), /destroyed/);
   console.log('completed');
 })();`,
+  'answers keep request order behind the raster lane': `
+(async () => {
+  const engine = native.create(options);
+  // A capture rastered on the lane while the engine thread moves on, then
+  // requests that fail at once -- before the fetch, before the paint. They
+  // finish long before that raster does and must still be answered after it.
+  const heavy = {...request, width: 1920, height: 2000};
+  const missing = {...request, file: request.file + '.missing'};
+  const unmatched = {...request, selector: '#does-not-exist'};
+  const batch = [heavy, missing, heavy, unmatched, heavy, missing, request];
+  const order = [];
+  await Promise.all(batch.map((r, i) => native.capture(engine, r).then(() => order.push(i), () => order.push(i))));
+  assert.deepEqual(order, batch.map((_, i) => i));
+  native.destroy(engine);
+  console.log('completed');
+})();`,
   'libuv pool remains available during capture': `
 (async () => {
   const http = require('node:http');

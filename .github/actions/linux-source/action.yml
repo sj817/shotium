@@ -161,7 +161,7 @@ runs:
       uses: actions/cache/restore@v6
       with:
         path: src/out/musl-sysroot
-        key: musl-sysroot-alpine-3.22-musl-1.2.5-r12-headers-6.14.2-r0-${{ inputs.arch }}-v5
+        key: musl-sysroot-alpine-3.22-musl-1.2.5-r13-headers-6.14.2-r0-${{ inputs.arch }}-v5
 
     - name: assemble the Alpine musl sysroot
       if: inputs.libc == 'musl' && steps.musl-sysroot.outputs.cache-hit != 'true'
@@ -185,7 +185,7 @@ runs:
             apk add --root /sysroot --arch "$1" --initdb --no-cache \
               --no-scripts \
               --repositories-file /etc/apk/repositories \
-              musl-dev=1.2.5-r12 linux-headers=6.14.2-r0
+              musl-dev=1.2.5-r13 linux-headers=6.14.2-r0
           ' -- "$alpine_arch"
         # apk creates root-owned package state and device nodes under --root.
         # Neither belongs to the compiler sysroot: device nodes cannot be

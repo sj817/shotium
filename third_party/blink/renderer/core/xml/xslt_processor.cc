@@ -43,7 +43,6 @@
 #include "third_party/blink/renderer/core/inspector/console_message.h"
 #include "third_party/blink/renderer/core/loader/document_loader.h"
 #include "third_party/blink/renderer/core/xml/document_xslt.h"
-#include "third_party/blink/renderer/core/xml/parser/xml_document_parser.h"
 #include "third_party/blink/renderer/platform/weborigin/security_origin.h"
 
 namespace blink {
@@ -296,8 +295,6 @@ bool XSLTProcessor::TransformToString(Node* source,
   return false;
 }
 
-void XSLTProcessor::ParseErrorFunc(void* user_data, const xmlError*) {}
-void XSLTProcessor::GenericErrorFunc(void* user_data, const char* msg, ...) {}
 
 void XSLTProcessor::Trace(Visitor* visitor) const {
   visitor->Trace(stylesheet_);

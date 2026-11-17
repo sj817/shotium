@@ -10,7 +10,7 @@
 //
 // Relative paths are resolved against the repository root.
 
-import {existsSync, mkdirSync, mkdtempSync, readFileSync} from 'node:fs';
+import {existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync} from 'node:fs';
 import path from 'node:path';
 
 import {cac} from 'cac';
@@ -126,11 +126,25 @@ function boxResize(image: Image, w: number, h: number): Image {
   return {width: w, height: h, data};
 }
 
+// A run writes about 200 MB of captures. They are evidence only when a check
+// failed, so a passing run deletes them; a failing one keeps and names them.
 async function renderChecks(checks: Checks, packageDir: string): Promise<void> {
-  const manifest = readManifest();
   const outputRoot = resolve('shot/testdata/out');
   mkdirSync(outputRoot, {recursive: true});
   const output = mkdtempSync(path.join(outputRoot, 'bilibili-'));
+  const failuresBefore = checks.failures;
+  let finished = false;
+  try {
+    await checkCaptures(checks, packageDir, output);
+    finished = true;
+  } finally {
+    if (finished && checks.failures === failuresBefore) rmSync(output, {recursive: true, force: true});
+    else console.log(`Bilibili captures kept for inspection: ${output}`);
+  }
+}
+
+async function checkCaptures(checks: Checks, packageDir: string, output: string): Promise<void> {
+  const manifest = readManifest();
   const captures = await capture(packageDir, output);
   const ids = new Set(captures.pages.map((p) => p.id));
   if (ids.size !== ARTICLES.size || ![...ARTICLES].every((a) => ids.has(a))) throw new Error('did not capture both original articles');

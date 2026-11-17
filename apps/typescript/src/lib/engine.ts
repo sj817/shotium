@@ -85,14 +85,17 @@ function conflictingOption(
  * There is one renderer and there is no way to have two. Blink is a
  * process-wide singleton: it is initialised once, there is no path to a second
  * one, and `worker_threads` do not change that because they share the process.
- * So captures are serialised however many callers there are, and a program
- * that wants four at once wants four processes.
+ * So documents are laid out one at a time however many callers there are;
+ * only the raster of one overlaps the layout of the next (below), and a
+ * program that wants four renders at once wants four processes.
  *
- * The queue is not about fairness. Each capture occupies a libuv thread pool
- * thread for as long as the render takes, and there are four of those by
- * default, shared with fs and dns -- so letting four screenshots go at once
- * would stall the host's file reads for a fifth of a second at a time while
- * gaining nothing, since the engine serialises them anyway.
+ * The queue is the engine's, not this object's. Every capture is handed to
+ * the native side as soon as it is asked for: the addon answers through a
+ * thread-safe function, so a capture in flight holds no libuv thread, and the
+ * engine thread takes requests in the order they arrived. Handing them over
+ * early is what lets one overlap the next -- the engine rasters a painted
+ * capture on its raster lane while its blink thread lays out the next one,
+ * which it can only do if the next one is already there.
  */
 export class Engine {
   // Whether *this* object considers itself started. The engine behind it may
@@ -103,6 +106,13 @@ export class Engine {
 
   get running(): boolean {
     return this.active && shared !== null;
+  }
+
+  // Adds a capture to what stop() and dispose() wait for. Settled rather than
+  // resolved: they wait for the work to end, whatever it ended in.
+  private track(capture: Promise<unknown>): void {
+    const settled = capture.then(() => {}, () => {});
+    this.tail = Promise.all([this.tail, settled]);
   }
 
   /**
@@ -306,11 +316,11 @@ export class Engine {
     const handle = shared!;
     const native = binding.load();
 
-    // Chain onto the tail so that captures run one at a time. The catch keeps
-    // one failure from poisoning everything queued behind it.
-    const result = this.tail.catch(() => {}).then(
-        () => native.capture(handle, request));
-    this.tail = result.catch(() => {});
+    // Straight to the engine, which queues it; see the class comment. `tail`
+    // only tracks what is still in flight, for stop() and dispose() to wait
+    // on, and a failure in it is the caller's to see, not theirs.
+    const result = native.capture(handle, request);
+    this.track(result);
 
     const captured = await result;
 
@@ -337,10 +347,10 @@ export class Engine {
     const handle = shared!;
     const native = binding.load();
 
-    // The same queue as capture(): one renderer, one capture at a time.
-    const result = this.tail.catch(() => {}).then(
-        () => native.captureTiles(handle, request));
-    this.tail = result.catch(() => {});
+    // The engine's queue, as for capture(). A tiles capture is rastered on
+    // the engine thread itself, after whatever the lane was doing.
+    const result = native.captureTiles(handle, request);
+    this.track(result);
 
     const captured = await result;
 

@@ -96,3 +96,6 @@ node_modules
 /apps/csharp/obj/
 /apps/java/target/
 /apps/*/*.png
+
+# Temporary files: logs, scratch scripts, drafts and intermediate output.
+/temp/

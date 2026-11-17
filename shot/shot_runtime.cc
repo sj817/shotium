@@ -589,7 +589,7 @@ ShotRenderer& ShotRuntime::renderer() {
   return *renderer_;
 }
 
-void ShotRuntime::PurgeMemory() {
+void ShotRuntime::PurgeMemory(PurgeScope scope) {
   // SHOT_PROFILE=1 logs how long each stage below took, the same switch the
   // renderer's profile lines answer to.
   const bool profile = ProfileEnabled();
@@ -624,8 +624,24 @@ void ShotRuntime::PurgeMemory() {
   // Skia's own two, which are not memory consumers: the glyph raster cache and
   // SkResourceCache's non-discardable half. And the decoded web fonts kept
   // across documents, which hold their typefaces outside every heap above.
-  SkGraphics::PurgeAllCaches();
-  blink::FontCustomPlatformData::ClearDecodedFontCache();
+  //
+  // An idle purge keeps the glyph cache and the decoded fonts. Both are
+  // bounded (SkGraphics' font cache limit, DecodedFontCache's 24 MB), both
+  // are what the next request of a service rendering the same templates
+  // needs first, and rebuilding them is the whole of what made the first
+  // capture after a quiet spell slow: a bilibili template with sixty WOFF2
+  // subsets went from 179 ms back to back to 246 ms after a 3 s pause, and to
+  // 170 ms with the decoded fonts kept; fonts.html from 3.4 to 7.7 ms, and to
+  // 4.6 ms with both kept. The process measured no larger for it, because what
+  // the two hold is small next to the page and the free lists the rest of
+  // this function hands back. An explicit release still clears them: a caller
+  // who asks for memory back is saying the next request is not coming soon.
+  if (scope == PurgeScope::kAll) {
+    SkGraphics::PurgeAllCaches();
+    blink::FontCustomPlatformData::ClearDecodedFontCache();
+  } else {
+    SkGraphics::PurgeResourceCache();
+  }
   stage_done(3);
 
   // And the free lists underneath all of it. Everything above returns memory

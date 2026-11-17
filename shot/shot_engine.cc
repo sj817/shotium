@@ -42,6 +42,7 @@
 #include "shot/shot_capture.h"
 #include "shot/shot_capture_context.h"
 #include "shot/shot_network.h"
+#include "shot/shot_renderer.h"
 #include "shot/shot_request.h"
 #include "shot/shot_runtime.h"
 
@@ -185,6 +186,22 @@ class EngineThread : public base::DelegateSimpleThread::Delegate {
     return task_runner_->PostNonNestableTask(FROM_HERE, std::move(task));
   }
 
+  // Post() for a capture, counted until it starts: the renderer hands a
+  // painted capture to its raster lane only when another is waiting behind
+  // it (ShotRenderer::SetOverlapProbe). The task calls CaptureStarted().
+  bool PostCapture(base::OnceClosure task) {
+    waiting_captures_.fetch_add(1, std::memory_order_relaxed);
+    if (!Post(std::move(task))) {
+      waiting_captures_.fetch_sub(1, std::memory_order_relaxed);
+      return false;
+    }
+    return true;
+  }
+  void CaptureStarted() {
+    waiting_captures_.fetch_sub(1, std::memory_order_relaxed);
+    OnRequestStarted();
+  }
+
   bool RunSync(base::OnceClosure task) {
     base::WaitableEvent done;
     if (!Post(base::BindOnce(
@@ -219,6 +236,16 @@ class EngineThread : public base::DelegateSimpleThread::Delegate {
     purged_ = true;
   }
 
+  // OnRequestFinished() from any thread. A pipelined capture is answered on
+  // the raster lane, and the engine is not idle until it has been: the
+  // purge the idle timer leads to would wait on the lane, and the bitmap it
+  // releases is the lane's until then.
+  void PostRequestFinished() {
+    task_runner_->PostTask(FROM_HERE,
+                           base::BindOnce(&EngineThread::OnRequestFinished,
+                                          base::Unretained(this)));
+  }
+
   void PurgeAndArmTrim() {
     purged_ = true;
     if (active_requests_ == 0) {
@@ -228,6 +255,14 @@ class EngineThread : public base::DelegateSimpleThread::Delegate {
 
   bool default_allow_file_access() const { return options_.allow_file_access; }
   ShotRuntime& runtime() { return *runtime_; }
+
+  // Only meaningful once Start() has returned true.
+  bool accepting() {
+    std::lock_guard lock(mutex_);
+    return accepting_;
+  }
+  const std::string& cache_dir() const { return cache_dir_; }
+  bool cache_active() const { return cache_active_; }
 
  private:
   void ArmIdleTimer() {
@@ -245,7 +280,7 @@ class EngineThread : public base::DelegateSimpleThread::Delegate {
       return;
     }
     if (!purged_) {
-      runtime_->PurgeMemory();
+      runtime_->PurgeMemory(ShotRuntime::PurgeScope::kIdle);
       purged_ = true;
       ArmIdleTimer();
       return;
@@ -297,6 +332,19 @@ class EngineThread : public base::DelegateSimpleThread::Delegate {
       return;
     }
     runtime_ = runtime->get();
+    // What Status() reports, fixed by the time the runtime exists: the cache
+    // directory is opened (or found unusable) inside ShotRuntime::Create and
+    // nothing changes either answer until teardown. Copied here so that
+    // reading them is not a task on this thread -- a task that would queue
+    // behind the warm-up posted below, and make every start() wait for a
+    // render it was meant to run behind.
+    cache_dir_ = ShotNetwork::CacheDir().AsUTF8Unsafe();
+    cache_active_ = ShotNetwork::CacheActive();
+    runtime_->renderer().SetOverlapProbe(base::BindRepeating(
+        [](const std::atomic<int>* waiting) {
+          return waiting->load(std::memory_order_relaxed) > 0;
+        },
+        base::Unretained(&waiting_captures_)));
 
     {
       base::RunLoop run_loop;
@@ -336,12 +384,16 @@ class EngineThread : public base::DelegateSimpleThread::Delegate {
   base::WaitableEvent ready_;
   // Written on the engine thread before ready_, read after it.
   std::string error_;
+  std::string cache_dir_;
+  bool cache_active_ = false;
   raw_ptr<ShotRuntime> runtime_ = nullptr;
   scoped_refptr<base::SingleThreadTaskRunner> task_runner_;
   base::RepeatingClosure quit_;
   base::OneShotTimer idle_timer_;
   bool purged_ = false;
   int active_requests_ = 0;
+  // Captures posted and not yet started; see PostCapture().
+  std::atomic<int> waiting_captures_{0};
 };
 
 std::atomic<bool>& EngineWasCreated() {
@@ -539,38 +591,53 @@ bool EngineService::default_allow_file_access() const {
 bool EngineService::Capture(ScreenshotRequest request,
                             bool tiles,
                             EngineCompletion completion) {
-  return impl_->thread.Post(base::BindOnce(
+  return impl_->thread.PostCapture(base::BindOnce(
       [](Impl* impl, ScreenshotRequest request, bool tiles,
          EngineCompletion done) {
-        impl->thread.OnRequestStarted();
+        impl->thread.CaptureStarted();
+        if (!tiles) {
+          // Painted here and, when it can be, rastered on the lane while this
+          // thread takes the next request; answered from whichever thread
+          // finishes it. See ShotRenderer::RenderPipelined.
+          CaptureAndDeliverPipelined(
+              impl->thread.runtime(), request,
+              base::BindOnce(
+                  [](Impl* impl, EngineCompletion done,
+                     base::expected<CaptureResult, std::string> captured,
+                     CaptureStats stats) {
+                    EngineResult result;
+                    result.stats = std::move(stats);
+                    if (captured.has_value()) {
+                      result.image = std::move(captured->image);
+                    } else {
+                      result.status = EngineStatus::kCapture;
+                      result.error = captured.error();
+                    }
+                    std::move(done).Run(std::move(result));
+                    impl->thread.PostRequestFinished();
+                  },
+                  base::Unretained(impl), std::move(done)));
+          return;
+        }
         EngineResult result;
-        if (tiles && !request.tile) {
+        if (!request.tile) {
           result.status = EngineStatus::kUsage;
           result.error =
               "shot_engine_capture_tiles needs tile.height in the request";
         } else {
           result.stats.emplace();
-          if (tiles) {
-            auto captured =
-                CaptureTiles(impl->thread.runtime(), request, &*result.stats);
-            if (captured.has_value()) {
-              result.tiles = std::move(*captured);
-            } else {
-              result.error = captured.error();
-            }
+          auto captured =
+              CaptureTiles(impl->thread.runtime(), request, &*result.stats);
+          if (captured.has_value()) {
+            result.tiles = std::move(*captured);
           } else {
-            auto captured = CaptureAndDeliver(impl->thread.runtime(), request,
-                                              &*result.stats);
-            if (captured.has_value()) {
-              result.image = std::move(captured->image);
-            } else {
-              result.error = captured.error();
-            }
-          }
-          if (!result.error.empty()) {
             result.status = EngineStatus::kCapture;
+            result.error = captured.error();
           }
         }
+        // A tiles request that fails before rastering must not overtake the
+        // capture before it on the raster lane.
+        impl->thread.runtime().renderer().DrainRaster();
         std::move(done).Run(std::move(result));
         impl->thread.OnRequestFinished();
       },
@@ -625,20 +692,22 @@ EngineResult EngineService::CacheSync(CacheOptions options, bool clearing) {
 }
 base::DictValue EngineService::Status() {
   base::DictValue result;
-  impl_->thread.RunSync(base::BindOnce(
-      [](base::DictValue* result) {
-        const auto& dir = ShotNetwork::CacheDir();
-        result->Set("cacheDir", dir.empty() ? base::Value()
-                                            : base::Value(dir.AsUTF8Unsafe()));
-        result->Set("cacheActive", ShotNetwork::CacheActive());
-      },
-      base::Unretained(&result)));
+  // Answered from what the engine thread recorded before it signalled ready,
+  // not by a task on that thread: start() reports this, and a task would wait
+  // for the warm-up render queued ahead of it. An engine that has been shut
+  // down answers nothing, as it did when the task could not be posted.
+  if (!impl_->thread.accepting()) {
+    return result;
+  }
+  const std::string& dir = impl_->thread.cache_dir();
+  result.Set("cacheDir", dir.empty() ? base::Value() : base::Value(dir));
+  result.Set("cacheActive", impl_->thread.cache_active());
   return result;
 }
 void EngineService::Purge(bool release) {
   impl_->thread.RunSync(base::BindOnce(
       [](Impl* impl, bool release) {
-        impl->thread.runtime().PurgeMemory();
+        impl->thread.runtime().PurgeMemory(ShotRuntime::PurgeScope::kAll);
         if (release) {
           impl->thread.runtime().ReleaseWorkingSet();
           impl->thread.ResetIdle();

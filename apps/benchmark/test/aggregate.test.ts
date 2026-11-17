@@ -91,6 +91,11 @@ test('aggregates exactly six native platform results into the standard directory
     assert.equal(aggregate.manifest.evidence_status, 'complete');
     assert.equal(aggregate.manifest.publishable, true);
     assert.equal(aggregate.manifest.platforms.length, 6);
+    const linux = aggregate.manifest.platforms.find((entry: any) => entry.platform === 'linux-x64');
+    assert.deepEqual(linux.archived_files, ['summary.json', 'quality.json', 'failures.json']);
+    assert.match(linux.permanent_sha256['samples.jsonl'], /^[a-f0-9]{64}$/);
+    assert.equal(fs.existsSync(path.join(aggregate.destination, 'linux-x64', 'summary.json')), true);
+    assert.equal(fs.existsSync(path.join(aggregate.destination, 'linux-x64', 'samples.jsonl')), false);
     assert.match(fs.readFileSync(path.join(aggregate.destination, 'report.md'), 'utf8'), /No cross-platform ranking/);
     const chineseReport = path.join(aggregate.destination, 'report.zh-CN.md');
     assert.equal(fs.existsSync(chineseReport), true);

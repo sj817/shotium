@@ -9,8 +9,8 @@
 // makes every later number meaningless, so it is checked before diffing.
 //
 // Differences are expected and allowed. What is not allowed is an unexplained
-// one -- see apps/docs/cut-progress.md section 8.6 for the render-affecting changes
-// that are already known and accounted for.
+// one -- the render-affecting changes already accounted for are listed under
+// "Known intended differences" in .claude/skills/verify-engine/SKILL.md.
 //
 //   pnpm accept                # build first, then render and diff
 //   pnpm accept --skip-build   # the binary in out/Shot as it is
@@ -75,8 +75,8 @@ async function main(opts: {skipBuild: boolean; width: number; height: number}): 
   console.log('\n== difference by region ==');
   console.log("  A whole-image percentage cannot distinguish 'antialiasing is a");
   console.log("  shade different everywhere' from 'one element is missing', so");
-  console.log('  the corpus is reported feature by feature. See section 15 of');
-  console.log('  apps/docs/cut-progress.md for what each surviving number is.');
+  console.log('  the corpus is reported feature by feature. Known intended');
+  console.log('  differences are listed in .claude/skills/verify-engine/SKILL.md.');
   diffReport(oracle, actual, loadRegions(resolve('shot/testdata/regions.txt'), []), 8);
   return diffExit;
 }

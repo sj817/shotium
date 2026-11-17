@@ -23,7 +23,28 @@ CLI / --serve / C ABI / Node addon
   Blink initialises once per process; its work is serialised on the engine
   thread. Preserve the non-nestable queue so a nested resource-loading loop
   cannot start another capture inside the current one. The Node addon uses
-  TSFN completion rather than occupying a libuv worker while Blink runs.
+  TSFN completion rather than occupying a libuv worker while Blink runs, and
+  the TS package hands every capture to the engine immediately instead of
+  queueing in JS.
+- Raster is pipelined (`ShotRenderer::RenderPipelined`): a capture that is
+  one image, one paint window and at most `ImageStream::IsSmall` hands its
+  display list to the renderer's raster lane once painted, and the engine
+  thread starts the next document -- but only when another capture is
+  already queued (`SetOverlapProbe`, fed by `EngineThread::PostCapture`).
+  With nothing behind it the hop only adds latency (1-3% on small captures
+  awaited one at a time), so it rasters in place. One capture rasters at a
+  time: the handover waits for the lane, and anything else that rasters or
+  touches the reusable bitmap (`small_bitmap_`), the `RasterPool` or the
+  caches the raster reads (`PurgeMemory`, tiles, large captures) calls
+  `DrainRaster()` first. So does every answer given on the engine thread --
+  a failure before the paint, a tiles request -- or it overtakes the capture
+  still on the lane; answers leave in request order
+  (`pnpm verify:node-entry` checks it). The raster half (`RasterPrepared`)
+  must not touch a Blink object or `CaptureContext::Current()`, which belongs
+  to the capture being laid out on the engine thread; statistics travel in
+  the job. `CaptureAndDeliverPipelined` merges the two halves and answers
+  from whichever thread finishes last. Engine status is a snapshot taken
+  before `ready_`, so `start()` does not wait behind the warm-up.
 - [shot_runtime.cc](../../shot/shot_runtime.cc) owns process setup, fonts and
   feature flags. Keep `RasterInducingScroll` disabled: its paint operations
   require compositor scroll state that this engine does not provide.
@@ -77,10 +98,11 @@ CLI / --serve / C ABI / Node addon
   lifetime of each returned Buffer. Larger and page-backed outputs stay in
   place; the Buffer finalizer still owns and frees the original `Bytes`.
 - The engine keeps decoded web fonts between captures, keyed by the font's
-  bytes (`FontCustomPlatformData::Create`, 64 MB, cleared by `PurgeMemory()`).
-  A changed file misses the cache; only the decode is shared.
-  See [performance-cut-audit.md](performance-cut-audit.md) for the measured
-  split behind these and the candidates that were measured and left alone.
+  bytes (`FontCustomPlatformData::Create`, 24 MB, least recently used out
+  first). A changed file misses the cache; only the decode is shared. The
+  idle purge (`PurgeScope::kIdle`) keeps it and the Skia glyph cache;
+  re-decoding sixty WOFF2 subsets was 68 ms of a 246 ms first capture after a
+  pause. Only an explicit release (`kAll`) clears them.
 - The resident entry points (`--serve`, `EngineService`) render a built-in
   document once at start (`WarmUp()` in `shot_capture.cc`) so the process's
   one-time layout, shaping, raster-thread and encoder costs -- 7-15 ms, and
@@ -165,9 +187,11 @@ and CI. Keep reusable code in `scripts/lib/` and tests next to the module.
   `pnpm install --no-lockfile` in CI because its optional platform packages may
   be pinned to an unpublished version; do not use `--no-optional` to hide that
   issue, since the package build also needs a native bundler dependency.
-- There is no root pnpm workspace. Consult
-  [the tooling migration record](scripts-to-typescript.md) before changing
-  project boundaries or install semantics.
+- There is no root pnpm workspace on purpose: a root `pnpm-workspace.yaml`
+  makes `pnpm install` inside `apps/typescript/` or `apps/benchmark/` install
+  the workspace instead of that project, and CI installs each standalone.
+  Keep `scripts/`, `apps/typescript/` and `apps/benchmark/` as separate
+  projects with their own lockfiles.
 
 ## Build and CI
 
@@ -191,6 +215,10 @@ build loop. Read the affected workflow and source action for CI changes.
 - ICU, Skia and Perfetto are tracked source slices; their `README.shotium.md`
   files describe the provenance. ICU data is generated from the tracked cast
   data. Do not reintroduce a separate checkout or patch replay for these trees.
+  The same holds for the eighteen former DEPS checkouts listed in
+  `apps/docs/upstream-sync.md`: they keep only the files an engine build
+  reads, and a build that needs another file takes it from upstream at the
+  revision their `README.shotium.md` records.
 - Preserve the `LASTCHANGE` pin and content-faithful mtimes when changing warm
   builds. Otherwise a source-identical checkout can rebuild many dependencies.
   Relevant code is in DEPS, `scripts/ci/stamp-mtimes.ts` and

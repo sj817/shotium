@@ -32,6 +32,7 @@
 #include "third_party/blink/renderer/core/dom/id_target_observer.h"
 #include "third_party/blink/renderer/core/dom/increment_load_event_delay_count.h"
 #include "third_party/blink/renderer/core/dom/node_cloning_data.h"
+#include "third_party/blink/renderer/core/dom/scriptable_document_parser.h"
 #include "third_party/blink/renderer/core/dom/shadow_root.h"
 #include "third_party/blink/renderer/core/dom/xml_document.h"
 #include "third_party/blink/renderer/core/frame/deprecation/deprecation.h"
@@ -55,7 +56,6 @@
 #include "third_party/blink/renderer/core/svg/svg_zoom_migration.h"
 #include "third_party/blink/renderer/core/svg_names.h"
 #include "third_party/blink/renderer/core/xlink_names.h"
-#include "third_party/blink/renderer/core/xml/parser/xml_document_parser.h"
 #include "third_party/blink/renderer/platform/geometry/path_builder.h"
 #include "third_party/blink/renderer/platform/heap/garbage_collected.h"
 #include "third_party/blink/renderer/platform/loader/fetch/fetch_initiator_type_names.h"
@@ -113,7 +113,7 @@ void SVGUseElement::Trace(Visitor* visitor) const {
 #if DCHECK_IS_ON()
 static inline bool IsWellFormedDocument(const Document& document) {
   if (IsA<XMLDocument>(document))
-    return static_cast<XMLDocumentParser*>(document.Parser())->WellFormed();
+    return document.Parser()->AsScriptableDocumentParser()->WellFormed();
   return true;
 }
 #endif

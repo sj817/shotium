@@ -2,23 +2,18 @@
 
 [English](./README.md) · 简体中文
 
-引擎的设计记录、README 嵌入的图片，以及基准测试归档。维护者的工作指南是仓库根目录的 [CLAUDE.md](../../CLAUDE.md)，这里的文档是它所指向的内容。
+引擎的参考文档、README 嵌入的图片，以及基准测试归档。维护者的工作指南是仓库根目录的 [CLAUDE.md](../../CLAUDE.md)，这里的文档是它所指向的内容。
 
 ## 设计文档
 
 | 文档 | 适用场景 / 核心主题 |
 |---|---|
 | [agent-reference.md](agent-reference.md) | 深入了解运行时与 API 约束、脚本约定、构建与 CI 注意事项，或测试方法 |
-| [shotium-plan.md](shotium-plan.md) | 了解核心架构设计与技术决策：项目定位、整体分层（第 1 节）、网络栈选型与 `//net` 集成（第 2 节）、外部接口约定（第 4 节）、明确排除的非目标（第 5 节） |
-| [cut-progress.md](cut-progress.md) | 追溯 Chromium 模块裁剪历史与判定依据：移除 V8 运行时（第 8 节）、恢复还是切除的判定准则（第 11 节）、剥离 `//content` 架构直接驱动 Blink（第 14 节）、二进制体积构成分析（第 17 节）、可用性与工程化完善（第 20 节）、CI 流水线建设（第 21 节）、基于构建依赖图裁剪源码树（第 22 节） |
 | [upstream-sync.md](upstream-sync.md) | 上游 Chromium 同步指南：基线版本记录、分歧点设计原理、基于语义的重放流程以及同步后的完整性验证 |
 | [upstream-sync-tool.md](upstream-sync-tool.md) | `pnpm upstream:sync` 定制化三方合并工具的设计与操作说明 |
-| [upstream-sync-0.6.0-validation.md](upstream-sync-0.6.0-validation.md) | Chromium 155.0.8048.0 版本同步的完整验收记录（包含机器可读的配置状态与路径决策文件） |
 | [performance.md](performance.md) | 基准性能对比测试方法论：测量环境控制、采样收敛条件与判定准则 |
-| [performance-cut-audit.md](performance-cut-audit.md) | 2026-09-14 截图链路审计：实测阶段拆分、删掉或重构的部分（并行 PNG 编码、推迟首轮布局、解码字体缓存、按需建网络栈）以及量过之后没有动的候选 |
-| [scripts-to-typescript.md](scripts-to-typescript.md) | 自动化脚本工程化演化记录：手写脚本迁移至 TypeScript 工具链的背景与架构约定 |
 
-大部分设计文档用中文写成；代码注释与 CLAUDE.md 是英文。
+这里只保留描述当前代码树的文档。每项改动的理由和实测数据写在它的提交信息和 PR 里；一次性的工作记录（裁剪流水账、审计、同步验收记录）已删除，需要时查 `git log`。
 
 ## 素材
 

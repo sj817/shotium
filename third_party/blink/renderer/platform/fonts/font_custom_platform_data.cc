@@ -340,8 +340,8 @@ namespace {
 // a changed file is a miss. The typeface is immutable and refcounted and is
 // shared the way FontCache shares system typefaces.
 //
-// Bounded by decoded size, oldest out first, and cleared by an explicit
-// release of memory (ClearDecodedFontCache).
+// Bounded by decoded size, least recently used out first, and cleared by an
+// explicit release of memory (ClearDecodedFontCache) but not by an idle one.
 class DecodedFontCache {
  public:
   struct Key {
@@ -371,11 +371,18 @@ class DecodedFontCache {
     return key;
   }
 
+  // A hit moves to the back, so eviction takes the least recently used font
+  // rather than the first one inserted: an idle purge no longer empties this
+  // cache, and a long-lived worker's steady template should not lose its
+  // fonts to a one-off page that happened to arrive after them.
   std::optional<Entry> Find(const Key& key) {
     base::AutoLock lock(lock_);
-    for (const Entry& entry : entries_) {
-      if (entry.key == key) {
-        return entry;
+    for (auto it = entries_.begin(); it != entries_.end(); ++it) {
+      if (it->key == key) {
+        Entry hit = *it;
+        entries_.erase(it);
+        entries_.push_back(hit);
+        return hit;
       }
     }
     return std::nullopt;

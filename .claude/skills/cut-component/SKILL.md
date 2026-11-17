@@ -97,8 +97,14 @@ Rules:
 - Restoring an `#include` line is not restoring a component:
   `pnpm restore:includes` only re-adds includes whose header exists on disk
   today.
-- The full decision record is `apps/docs/cut-progress.md` section 11 (and 8.8
-  for the V8-removal round).
+- Prefer upstream's own way of saying "this is absent" over editing code: a
+  build flag (`is_p2p_enabled = false`, `media_use_ffmpeg = false`), a
+  restored two-file `buildflags` target that defines the flag as false, an
+  expected-errors list. Hollowing out a `#if BUILDFLAG(...)` block discards
+  what that block was for.
+- Follow an import chain to its end before restoring. `payments/mojom` was
+  restored, then cut again: its `webauthn/authenticator.mojom` import pulls
+  in all of `//device/fido` for APIs whose implementation does not exist.
 
 ## 3. Delete
 
@@ -153,7 +159,8 @@ In order; no step substitutes for the next:
 6. `/verify-engine`, including the acceptance run
    (`pnpm accept --skip-build`). No region of the corpus may move
    against the Chrome oracle; a rendering difference from a cut is a bug unless
-   it is documented in `apps/docs/cut-progress.md` section 8.6.
+   it is listed under "Known intended differences" in the verify-engine
+   skill, added there in the same change.
 
 Report on the three-level ladder. A green Linux probe is level 1 of 3 and
 has been followed by real compile failures (MPRIS includes,
@@ -166,6 +173,6 @@ not image contribution (ThinLTO already dropped the unreachable: 3.4 MB of
 Skia Graphite bitcode was 162 KB in the image), and `optimize_for_size` on
 Windows was a no-op until `build/config/compiler/BUILD.gn` was fixed to apply
 `-Os` inside the `is_win` branch. Measure with `pnpm size:report`
-(`--by-object <name>`) and the method in `apps/docs/cut-progress.md` section 17
-before planning a size cut; what remains in the image is mostly statically
+(`--by-object <name>`; the method is in the header of
+`scripts/build/size-report.ts`) before planning a size cut; what remains in the image is mostly statically
 reachable, and the large remaining items are data (ICU), not code.

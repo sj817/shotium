@@ -36,6 +36,8 @@ export interface ManifestPlatform {
   shards_complete?: boolean;
   evidence_complete?: boolean;
   artifact_error?: string | null;
+  /** Files committed for this platform; absent on runs that committed all four. */
+  archived_files?: string[];
 }
 
 export interface BenchmarkManifest {

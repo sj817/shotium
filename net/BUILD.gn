@@ -25,7 +25,16 @@ if (is_android) {
   import("//build/config/ios/bundle_data_from_filelist.gni")
 }
 
-enable_built_in_dns = use_blink
+import("//build/config/shot_build.gni")
+
+# shot resolves through the operating system only. HostResolver::ManagerOptions
+# defaults insecure_dns_mode to kDisabled and nothing configures DNS-over-HTTPS,
+# so the DnsClient the manager created was never asked to resolve anything, yet
+# it kept the whole built-in stub resolver (DnsTransaction, DnsSession, DoH
+# probing, DnsConfigService readers) reachable in the image. This is the
+# switch iOS uses for the same reason. Keep it equal to the one in
+# net/dns/BUILD.gn.
+enable_built_in_dns = use_blink && !is_shot_build
 
 # TODO(droger): Support client auth on iOS. See http://crbug.com/145954).
 #

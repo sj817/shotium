@@ -269,7 +269,7 @@ class RequestHandler {
   // there is nothing left after it that another silence would improve.
   void OnIdle() {
     if (!purged_) {
-      runtime_->PurgeMemory();
+      runtime_->PurgeMemory(ShotRuntime::PurgeScope::kIdle);
       purged_ = true;
       ArmIdleTimer();
       return;

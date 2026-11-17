@@ -44,9 +44,12 @@ twenty pairs had already given, and the whole matrix now takes about twenty
 minutes rather than an hour. A case whose two sides do the same work never
 settles to 2%, so the ceiling is what bounds it, at 8 s a side. The stopping
 rule reads only the interval's width, never which side of 1 it lies on, so
-it cannot favour either answer. A cold start's `processStartMs` -- node's own
-process starting -- is recorded and not judged; its engine start, import and
-first capture are.
+it cannot favour either answer. A cold start is judged on `firstImageMs`
+(require, `start()` and the first capture) and on `importMs` alone. Its parts
+-- `startMs`, the first capture's `wall` -- and `processStartMs`, node's own
+process starting, are recorded and not judged: the engine's warm-up runs
+behind `start()`, ahead of the first capture, so where one-time work sits
+moves time between the two without changing what the caller waits for.
 
 The verdict is calibrated, not absolute. `--calibrate` first times the
 candidate against itself on six quick cases -- every true ratio there is 1, so
