@@ -51,7 +51,7 @@ export const ALLOW: readonly RegExp[] = [
 // produce it, and the scripts that only run outside the engine jobs.
 export const DENY: readonly RegExp[] = [
   /^apps\//,
-  /^(README(\.zh)?\.md|CLAUDE\.md|AGENTS\.md|AUTHORS|\.clang-format|\.rustfmt\.toml)$/,
+  /^(README(\.zh)?\.md|CLAUDE\.md|AGENTS\.md|AUTHORS|\.clang-format|\.rustfmt\.toml|\.gitignore)$/,
   /^\.(claude|agents)\//,
   /^\.github\/\.gitignore$/,
   /^\.github\/workflows\/(checks|engine|preview|publish|refresh|benchmark|benchmark-site|perf-gate)\.yml$/,
@@ -73,7 +73,7 @@ export const PATHS_IGNORE: readonly string[] = [
   'apps/typescript/src/**', 'apps/typescript/test/**',
   'apps/typescript/*.md', 'apps/typescript/*.json', 'apps/typescript/*.ts',
   'apps/go/*.md', 'apps/python/*.md', 'apps/rust/*.md', 'apps/csharp/*.md', 'apps/java/*.md',
-  'README.md', 'README.zh.md', 'CLAUDE.md', 'AGENTS.md', 'AUTHORS', '.clang-format', '.rustfmt.toml',
+  'README.md', 'README.zh.md', 'CLAUDE.md', 'AGENTS.md', 'AUTHORS', '.clang-format', '.rustfmt.toml', '.gitignore',
   '.claude/**', '.agents/**', '.github/.gitignore',
   '.github/workflows/checks.yml', '.github/workflows/engine.yml', '.github/workflows/preview.yml',
   '.github/workflows/publish.yml', '.github/workflows/refresh.yml', '.github/workflows/benchmark.yml',

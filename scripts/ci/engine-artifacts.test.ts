@@ -143,6 +143,10 @@ test('prune keeps the newest directory of the most recent branches and main, and
   const noMain = pruneKeeps(records.filter((r) => r.workflow_run!.head_branch !== 'main'), 1);
   assert.deepEqual([runs(noMain.keep), runs(noMain.drop)], [[6], [2, 4, 5, 7]]);
   assert.deepEqual(pruneKeeps([], 3), {keep: [], drop: []});
+  // Directories saved since the protection time stay, whatever their rank:
+  // feat/a's older start (2) survives its newer save (5). Junk still goes.
+  const protectedRecent = pruneKeeps(records, 1, 'main', Date.parse('2026-09-02T00:00:00Z'));
+  assert.deepEqual([runs(protectedRecent.keep), runs(protectedRecent.drop)], [[2, 3, 4, 5, 6], [1, 7]]);
 });
 
 test('status lists what to build per OS, and --force builds everything', async () => {
