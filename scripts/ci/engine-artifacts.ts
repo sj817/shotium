@@ -23,7 +23,7 @@
 //   pnpm ci:engine-artifacts download-set --fingerprint <id> --engine-dir d1 --node-dir d2 --evidence-dir d3
 //   pnpm ci:engine-artifacts marker|provenance --platform <label> --fingerprint <id> --out <file>
 //   pnpm ci:engine-artifacts build-index --platform <label> --build-dir out/Shot --complete true --out <file>
-//   pnpm ci:engine-artifacts prune --name build-dir-linux-amd64 --keep 3 [--companion build-index-linux-amd64]
+//   pnpm ci:engine-artifacts prune --name build-dir-linux-amd64 --keep 3 [--companion build-index-linux-amd64] [--protect-hours 6]
 //   pnpm ci:engine-artifacts refresh-plan --fingerprint <id> --output
 
 import {appendFileSync, existsSync, mkdirSync, readdirSync, renameSync, writeFileSync} from 'node:fs';
@@ -164,7 +164,14 @@ export async function findBuildDir(api: Api, label: string, fingerprint: string 
 // branch's newest. Several open pull requests then each keep their own
 // warm start instead of evicting one another, and main's stays for the
 // next branch to fork from. Junk (see MIN_BUILD_DIR_BYTES) never survives.
-export function pruneKeeps(records: ArtifactRecord[], branches: number, defaultBranch = 'main'): {keep: ArtifactRecord[]; drop: ArtifactRecord[]} {
+//
+// A usable directory saved at or after `protectSince` (epoch ms) is kept
+// whatever its rank. A run chooses its directory in the resolve job and its
+// compile jobs download it minutes later; when two runs of one branch
+// overlap, the one that finishes first saved a newer directory and used to
+// delete the other's start in between ("Artifact not found for name:
+// build-dir-...").
+export function pruneKeeps(records: ArtifactRecord[], branches: number, defaultBranch = 'main', protectSince = Infinity): {keep: ArtifactRecord[]; drop: ArtifactRecord[]} {
   const usable = [...records].filter((r) => r.size_in_bytes >= MIN_BUILD_DIR_BYTES).sort(newestFirst);
   const newestPerBranch = new Map<string, ArtifactRecord>();
   for (const record of usable) {
@@ -174,6 +181,9 @@ export function pruneKeeps(records: ArtifactRecord[], branches: number, defaultB
   const keep = [...newestPerBranch.values()].sort(newestFirst).slice(0, branches);
   const main = newestPerBranch.get(defaultBranch);
   if (main && !keep.includes(main)) keep.push(main);
+  for (const record of usable) {
+    if (Date.parse(record.created_at) >= protectSince && !keep.includes(record)) keep.push(record);
+  }
   const kept = new Set(keep);
   return {keep, drop: records.filter((r) => !kept.has(r))};
 }
@@ -389,13 +399,16 @@ cli.command('prune', 'keep the newest usable build directory of the N most recen
   .option('--name <name>', 'artifact name')
   .option('--keep <n>', 'how many branches to keep a directory for', {default: '3'})
   .option('--companion <name>', 'a small artifact to keep for exactly the same runs')
-  .action(async (options: {name?: string; keep: string; companion?: string}) => {
+  .option('--protect-hours <n>', 'never delete a usable directory saved within this many hours', {default: '6'})
+  .action(async (options: {name?: string; keep: string; companion?: string; protectHours: string}) => {
     const {api} = environment();
     const name = options.name ?? fail('--name is required');
     const keep = Number(options.keep);
     if (!Number.isInteger(keep) || keep < 1) fail('--keep must be a positive integer');
+    const hours = Number(options.protectHours);
+    if (!Number.isFinite(hours) || hours < 0) fail('--protect-hours must be a non-negative number');
     const records = (await listByName(api, name)).filter((r) => trusted(r));
-    const decision = pruneKeeps(records, keep);
+    const decision = pruneKeeps(records, keep, 'main', Date.now() - hours * 3_600_000);
     for (const record of decision.drop) {
       await api(`actions/artifacts/${record.id}`, {method: 'DELETE'});
       console.log(`deleted ${name} from run ${record.workflow_run!.id} (${record.workflow_run!.head_branch}, ${record.created_at}, ${record.size_in_bytes} bytes)`);

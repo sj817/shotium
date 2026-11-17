@@ -42,9 +42,39 @@ export interface BuildIndex {
 }
 
 // Files whose change is priced by the objects that include them. Everything
-// else -- GN, DEPS, generator inputs, scripts, data -- is priced as unknown.
+// else -- GN, DEPS, generator inputs, data -- is priced as unknown, and an
+// unknown price means the platform's full shard count.
 const SOURCE = /\.(c|cc|cpp|cxx|m|mm|h|hh|hpp|hxx|inc|inl|rs|S|s|asm|def)$/i;
 const IMPLEMENTATION = /\.(c|cc|cpp|cxx|m|mm|rs|S|s|asm)$/i;
+
+// Engine inputs that compile nothing. Repository tooling and the root
+// manifest steer the jobs around the build -- checks, packaging, artifact
+// bookkeeping -- and Markdown is read by people and archives; a change to
+// them dirties no object, so it costs nothing to redo. They were priced as
+// unknown, which sent a change to a verify script or a package.json comment
+// to three runners per platform. The exceptions write build inputs (ICU
+// data, the Node SDK), the mtimes ninja compares, or the shard mechanics,
+// and stay unknown.
+const NO_COMPILE = /^(package\.json$|scripts\/)|\.md$/;
+const STEERS_COMPILE = /^scripts\/(build\/(engine|icu-repack|node-sdk|shards)|ci\/stamp-mtimes|lib\/(depfile|input-mtimes|ninja-state|runtime-feature-mtimes|shard-output))\.ts$/;
+
+/** Whether a changed path can be priced at zero: tooling that compiles nothing. */
+export function compilesNothing(file: string): boolean {
+  return NO_COMPILE.test(file) && !STEERS_COMPILE.test(file);
+}
+
+// GN files are read by gn gen, not compiled, and a change to their comments
+// or blank lines produces the same ninja files. Only that change is inert;
+// any other difference, a trailing comment included, is left to pricing.
+function gnStatements(text: string): string[] {
+  return text.split(/\r?\n/).map((line) => line.trim()).filter((line) => line && !line.startsWith('#'));
+}
+
+/** Whether two versions of a .gn or .gni file differ only in comment lines and blank lines. */
+export function sameGnStatements(before: string, after: string): boolean {
+  const a = gnStatements(before), b = gnStatements(after);
+  return a.length === b.length && a.every((line, i) => line === b[i]);
+}
 
 // A source file the table has never seen is a new one: one object, or a
 // regenerated jumbo unit, on the runner that owns it.
@@ -97,6 +127,7 @@ export function estimate(index: BuildIndex, changed: readonly string[]): Estimat
     const known = index.paths[file];
     if (known !== undefined) ms += known;
     else if (IMPLEMENTATION.test(file)) ms += NEW_SOURCE_MS;
+    else if (compilesNothing(file)) continue;
     else if (!SOURCE.test(file)) unknown.push(file);
     // A header nothing on this platform includes costs nothing.
   }

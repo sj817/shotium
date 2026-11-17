@@ -61,6 +61,7 @@ on:
       - 'AUTHORS'
       - '.clang-format'
       - '.rustfmt.toml'
+      - '.gitignore'
       - '.claude/**'
       - '.agents/**'
       - '.github/.gitignore'
@@ -182,6 +183,13 @@ jobs:
     name: "windows"
     needs: resolve
     if: needs.resolve.outputs.windows_count != '0'
+    # One build of a platform at a fingerprint at a time. A second run of the
+    # same tree (a dispatch beside a pull request's preview, say) waits for
+    # the first instead of building beside it; side by side they also pruned
+    # each other's saved build directories.
+    concurrency:
+      group: engine-build-${{ matrix.target.label }}-${{ needs.resolve.outputs.fingerprint }}
+      cancel-in-progress: false
     strategy:
       fail-fast: false
       matrix:
@@ -198,6 +206,13 @@ jobs:
     name: "linux"
     needs: resolve
     if: needs.resolve.outputs.linux_count != '0'
+    # One build of a platform at a fingerprint at a time. A second run of the
+    # same tree (a dispatch beside a pull request's preview, say) waits for
+    # the first instead of building beside it; side by side they also pruned
+    # each other's saved build directories.
+    concurrency:
+      group: engine-build-${{ matrix.target.label }}-${{ needs.resolve.outputs.fingerprint }}
+      cancel-in-progress: false
     strategy:
       fail-fast: false
       matrix:
@@ -215,6 +230,13 @@ jobs:
     name: "macos"
     needs: resolve
     if: needs.resolve.outputs.macos_count != '0'
+    # One build of a platform at a fingerprint at a time. A second run of the
+    # same tree (a dispatch beside a pull request's preview, say) waits for
+    # the first instead of building beside it; side by side they also pruned
+    # each other's saved build directories.
+    concurrency:
+      group: engine-build-${{ matrix.target.label }}-${{ needs.resolve.outputs.fingerprint }}
+      cancel-in-progress: false
     strategy:
       fail-fast: false
       matrix:
