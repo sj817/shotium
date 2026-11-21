@@ -328,9 +328,9 @@ build loop. Read the affected workflow and source action for CI changes.
 - Platforms use windows/linux/macos and amd64/arm64; Linux musl adds a `-musl` suffix. Stable names and archive
   roots are `shotium-cli-<platform>`, `shotium-c-abi-<platform>` and
   `shotium-example-<language>`, each compressed as real `.7z`.
-- CLI contains only its executable, two resource packs and license. C ABI
-  contains the shared library, resources, header, English/Chinese guides and
-  license; Windows also includes the import library. Examples contain tracked
+- Resource packs are compiled into every binary; no archive ships `.pak`
+  files. CLI contains only its executable and license. C ABI contains the
+  shared library, header, English/Chinese guides and license; Windows also includes the import library. Examples contain tracked
   source/dependency/lock files, the page, docs and `manifest.json`, without
   native binaries. That manifest retains version, commit and file hashes.
 - `pnpm package:cli` and `pnpm package:c-abi` stage separate empty directories;

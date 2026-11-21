@@ -35,7 +35,7 @@ process, or a jumbo grouping that only fails on another platform.
 
 ```bash
 pnpm -C scripts install --frozen-lockfile                          # once per checkout
-pnpm build:engine --log out/Shot/build.log                          # shotium.exe + .pak files
+pnpm build:engine --log out/Shot/build.log                          # shotium.exe (resource packs compiled in)
 pnpm build:engine --target shot_c --log out/Shot/c-build.log         # independent C ABI library
 pnpm build:engine --target shot_node --log out/Shot/node-build.log    # Node addon
 ```

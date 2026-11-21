@@ -40,7 +40,7 @@ curl.exe -fLO https://github.com/sj817/shotium/releases/latest/download/shotium-
 Set-Location shotium-example-csharp
 ```
 
-> Integrity check: Download [`SHA256SUMS`](https://github.com/sj817/shotium/releases/latest/download/SHA256SUMS) and run `sha256sum --check --ignore-missing SHA256SUMS`; native libraries reside in `native/shotium-c-abi-<platform>/`, containing the shared library, headers, and `.pak` resource files
+> Integrity check: Download [`SHA256SUMS`](https://github.com/sj817/shotium/releases/latest/download/SHA256SUMS) and run `sha256sum --check --ignore-missing SHA256SUMS`; native libraries reside in `native/shotium-c-abi-<platform>/`, containing the shared library and headers
 
 ## Run
 
@@ -48,7 +48,7 @@ Set-Location shotium-example-csharp
 dotnet run -c Release -- native/shotium-c-abi-linux-amd64 card.html card.png
 ```
 
-Positional arguments are `<library-dir> <input.html> <output.png>`, where `<library-dir>` is also passed to the engine as `resourceDir`; the program renders `card.html` at 720×380, prints capture statistics JSON to stdout, and writes `card.png` (pixel-identical to output from the `shotium` CLI)
+Positional arguments are `<library-dir> <input.html> <output.png>`; the program renders `card.html` at 720×380, prints capture statistics JSON to stdout, and writes `card.png` (pixel-identical to output from the `shotium` CLI)
 
 Providing a nonexistent input file demonstrates the error handling flow: exit code is 1, stderr outputs `capture failed (2): ...`, statistics are still reported, and no output image is generated
 
@@ -67,7 +67,7 @@ if (Shotium.shot_abi_version() != 3)
     throw new InvalidOperationException("C ABI mismatch");
 }
 
-var status = Shotium.shot_engine_create(JsonSerializer.Serialize(new { resourceDir = directory }), out var engine, out var error);
+var status = Shotium.shot_engine_create("{}", out var engine, out var error);
 var message = Shotium.TakeText(error); // copies data, then calls shot_buffer_free
 if (status != 0)
 {

@@ -250,8 +250,8 @@ export interface StartOptions {
   /** Overrides the built-in user agent string. */
   userAgent?: string;
   /**
-   * Where `shotium_data.pak` and `shotium_strings.pak` are. Defaults to the
-   * directory the engine was loaded from, which is where they ship.
+   * @deprecated Ignored since the resource packs were compiled into the
+   * engine. Still accepted so existing callers keep working.
    */
   resourceDir?: string;
 }

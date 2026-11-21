@@ -59,8 +59,10 @@ const hash = (bytes: Buffer | string) => createHash('sha256').update(bytes).dige
 const digest = (snapshot: Omit<RuntimeSnapshot, 'sha256'>) => hash(JSON.stringify({
   schema: snapshot.schema, platform: snapshot.platform, packageVersion: snapshot.packageVersion, files: snapshot.files,
 }));
+// Packages from earlier releases also carry two .pak files; they are hashed with the
+// rest of the platform package but no longer required.
 const REQUIRED = ['package/package.json', 'package/dist/index.js', 'platform/package.json',
-  'platform/shotium.node', 'platform/shotium_data.pak', 'platform/shotium_strings.pak'];
+  'platform/shotium.node'];
 
 /** Hash the package manifests, every dist file and the entire native package.
  * Source/docs in the main package are not executed; empty runtime-created

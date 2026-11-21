@@ -86,7 +86,7 @@ fn run() -> Result<(), Box<dyn Error>> {
             _library: library,
         }
     };
-    let options = CString::new(json!({"resourceDir": directory}).to_string())?;
+    let options = CString::new("{}")?;
     let (mut handle, mut error) = (ptr::null_mut(), ptr::null_mut());
     let status = unsafe { (api.create)(options.as_ptr(), &mut handle, &mut error) };
     let error = Buffer(&api, error);

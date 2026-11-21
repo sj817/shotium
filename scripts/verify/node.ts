@@ -35,7 +35,6 @@ type Package = typeof Shotium & {default: typeof Shotium};
 
 async function main(exeArg: string): Promise<number> {
   const exe = resolve(exeArg);
-  const buildDir = path.dirname(exe);
   const corpus = resolve('shot/testdata/render_corpus.html');
   const features = resolve('shot/testdata/features.html');
   const output = path.join(os.tmpdir(), `shot-node-check-${process.pid}.png`);
@@ -57,10 +56,7 @@ async function main(exeArg: string): Promise<number> {
   const request = {file: corpus, viewport: {width: 1248, height: 1320}, allowFileAccess: true};
 
   checks.section('it starts and renders');
-  // resourceDir because the packs live beside the executable in a checkout,
-  // not beside the addon. An install has them in one directory and needs none
-  // of this.
-  const came = shotium.runtime.start({resourceDir: buildDir, cacheDir: null});
+  const came = shotium.runtime.start({cacheDir: null});
   check(shotium.runtime.running === true, 'the engine is up');
   check(came.running === true && came.cacheDir === null, 'and start() reports what it came up as', JSON.stringify(came));
   // Which engine answered, checked rather than assumed. A checkout that has
@@ -241,8 +237,10 @@ async function main(exeArg: string): Promise<number> {
   // to have. It gets the first one rather than an error: a lifecycle object is
   // a lifecycle, and how many of those a program keeps is its own business.
   const second = new shotium.Runtime();
-  const adopted = second.start({resourceDir: buildDir});
-  check(second.running === true, 'a second Runtime adopts the engine');
+  // resourceDir is deprecated and ignored -- the packs are compiled in -- so
+  // naming one that matches nothing is neither a conflict nor an error.
+  const adopted = second.start({resourceDir: path.join(os.tmpdir(), 'shotium-no-such-resources')});
+  check(second.running === true, 'a second Runtime adopts the engine, ignoring resourceDir');
   check(adopted.cacheDir === null, 'and gets the configuration the engine actually has', JSON.stringify(adopted));
 
   // What it cannot do is ask for a different one. The options are fixed when
@@ -250,7 +248,7 @@ async function main(exeArg: string): Promise<number> {
   // this error is rendering with a value the caller did not ask for.
   let refused: Error | null = null;
   try {
-    second.start({resourceDir: buildDir, cacheDir: path.join(os.tmpdir(), 'no')});
+    second.start({cacheDir: path.join(os.tmpdir(), 'no')});
   } catch (error) {
     refused = error as Error;
   }
@@ -270,7 +268,7 @@ async function main(exeArg: string): Promise<number> {
   // engines there are rather than about how many times one may be asked for.
   let restarted: Error | null = null;
   try {
-    shotium.runtime.start({resourceDir: buildDir});
+    shotium.runtime.start();
   } catch (error) {
     restarted = error as Error;
   }

@@ -22,8 +22,8 @@ test('Linux platform packages carry an exact libc identity and keep glibc names 
   await mkdir(build);
   await Promise.all([
     writeFile(path.join(build, 'shotium.node'), 'addon'),
+    // Stale packs from an older build directory must not be picked up.
     writeFile(path.join(build, 'shotium_data.pak'), 'data'),
-    writeFile(path.join(build, 'shotium_strings.pak'), 'strings'),
   ]);
 
   for (const libc of ['glibc', 'musl'] as const) {
@@ -41,7 +41,7 @@ test('Linux platform packages carry an exact libc identity and keep glibc names 
     assert.deepEqual(manifest.os, ['linux']);
     assert.deepEqual(manifest.cpu, ['x64']);
     assert.deepEqual(manifest.libc, [libc]);
-    assert.deepEqual(manifest.files, ['shotium.node', 'shotium_data.pak', 'shotium_strings.pak']);
+    assert.deepEqual(manifest.files, ['shotium.node']);
   }
 
   await assert.rejects(

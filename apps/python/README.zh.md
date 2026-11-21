@@ -40,7 +40,7 @@ curl.exe -fLO https://github.com/sj817/shotium/releases/latest/download/shotium-
 Set-Location shotium-example-python
 ```
 
-> 完整性校验：可下载 [`SHA256SUMS`](https://github.com/sj817/shotium/releases/latest/download/SHA256SUMS) 并执行 `sha256sum --check --ignore-missing SHA256SUMS` 校验；原生动态库解压位于 `native/shotium-c-abi-<平台>/`，包含动态库、头文件与 `.pak` 资源包
+> 完整性校验：可下载 [`SHA256SUMS`](https://github.com/sj817/shotium/releases/latest/download/SHA256SUMS) 并执行 `sha256sum --check --ignore-missing SHA256SUMS` 校验；原生动态库解压位于 `native/shotium-c-abi-<平台>/`，包含动态库与头文件
 
 
 ## 运行
@@ -49,7 +49,7 @@ Set-Location shotium-example-python
 python3 screenshot.py native/shotium-c-abi-linux-amd64 card.html card.png
 ```
 
-Windows 环境下通常执行 `python`；命令行参数依次为 `<动态库目录> <输入 HTML 路径> <输出 PNG 路径>`，其中动态库目录会同时传入引擎作为 `resourceDir`；脚本会将 `card.html` 渲染为 720×380 的图像，把性能统计指标以 JSON 打印到标准输出，并生成 `card.png`，其渲染输出与 `shotium` CLI 命令行完全一致
+Windows 环境下通常执行 `python`；命令行参数依次为 `<动态库目录> <输入 HTML 路径> <输出 PNG 路径>`；脚本会将 `card.html` 渲染为 720×380 的图像，把性能统计指标以 JSON 打印到标准输出，并生成 `card.png`，其渲染输出与 `shotium` CLI 命令行完全一致
 
 如指定不存在的文件可测试错误处理流程：程序退出码为 1，向标准错误输出 `capture failed (2): ...`，输出中仍包含统计信息，但不会生成输出图片
 
@@ -74,7 +74,7 @@ if lib.shot_abi_version() != 3:
 
 engine = ptr()
 error = ptr()
-if lib.shot_engine_create(json.dumps({"resourceDir": str(directory)}).encode(), byref(engine), byref(error)):
+if lib.shot_engine_create(b"{}", byref(engine), byref(error)):
     raise RuntimeError(take(error))          # take() 先复制字节，再释放缓冲区
 
 try:

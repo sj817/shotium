@@ -11,7 +11,6 @@
 #include <tuple>
 #include <utility>
 
-#include "base/files/file_path.h"
 #include "base/functional/bind.h"
 #include "base/logging.h"
 #include "base/time/time.h"
@@ -23,7 +22,6 @@
 #include "base/message_loop/message_pump.h"
 #include "base/message_loop/message_pump_type.h"
 #include "base/observer_list.h"
-#include "base/path_service.h"
 #include "base/synchronization/condition_variable.h"
 #include "base/synchronization/lock.h"
 #include "base/thread_annotations.h"
@@ -44,6 +42,7 @@
 #include "shot/shot_platform.h"
 #include "shot/shot_profile.h"
 #include "shot/shot_renderer.h"
+#include "shot/shot_resources.h"
 #include "third_party/blink/public/platform/web_runtime_features.h"
 #include "skia/ext/font_utils.h"
 #include "skia/ext/legacy_display_globals.h"
@@ -54,7 +53,9 @@
 #include "third_party/blink/renderer/platform/heap/thread_state.h"
 #include "third_party/skia/include/core/SkExecutor.h"
 #include "third_party/skia/include/core/SkGraphics.h"
+#include "ui/base/l10n/l10n_util.h"
 #include "ui/base/resource/resource_bundle.h"
+#include "ui/base/resource/resource_scale_factor.h"
 #include "ui/base/ui_base_paths.h"
 
 #if BUILDFLAG(IS_WIN)
@@ -298,16 +299,21 @@ base::expected<std::unique_ptr<ShotRuntime>, std::string> ShotRuntime::Create(
   stages.Mark("icu");
 
   // The packed resources hold blink's user-agent stylesheet, which
-  // ShotPlatform::GetDataResourceString hands back.
+  // ShotPlatform::GetDataResourceString hands back. They are compiled in; see
+  // shot_resources.h for why they are not files.
+  //
+  // This is what InitSharedInstanceWithPakPath() did with a path, which has no
+  // buffer equivalent: the strings pack as the locale pack and as a resource
+  // pack at the first supported scale, the data pack after it, and ICU's
+  // application locale settled since LoadLocaleResources() never runs.
   ui::RegisterPathProvider();
-  base::FilePath module_dir;
-  if (!base::PathService::Get(base::DIR_MODULE, &module_dir)) {
-    return base::unexpected("could not locate the module directory");
-  }
-  ui::ResourceBundle::InitSharedInstanceWithPakPath(
-      module_dir.AppendASCII("shotium_strings.pak"));
-  ui::ResourceBundle::GetSharedInstance().AddDataPackFromPath(
-      module_dir.AppendASCII("shotium_data.pak"), ui::kScaleFactorNone);
+  ui::ResourceBundle::InitSharedInstanceWithBuffer(shot::ShotStringsPak(),
+                                                   ui::kScaleFactorNone);
+  ui::ResourceBundle& resources = ui::ResourceBundle::GetSharedInstance();
+  resources.AddDataPackFromBuffer(shot::ShotStringsPak(),
+                                  ui::GetSupportedResourceScaleFactors()[0]);
+  resources.AddDataPackFromBuffer(shot::ShotDataPak(), ui::kScaleFactorNone);
+  l10n_util::GetApplicationLocale(std::string());
   stages.Mark("resources");
 
   // The thread pool. base::ThreadPool::PostTask DCHECKs on an instance, and the

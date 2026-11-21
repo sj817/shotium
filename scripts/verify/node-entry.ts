@@ -11,7 +11,9 @@ const assert = require('node:assert/strict');
 const {createHash} = require('node:crypto');
 const native = require(process.env.SHOT_ADDON);
 const request = {file: process.env.SHOT_FIXTURE, allowFileAccess: true, width: 1280, height: 720};
-const options = {resourceDir: require('node:path').dirname(process.env.SHOT_ADDON)};
+// Deprecated and ignored by the engine, which has its resource packs compiled
+// in; a directory with no packs proves nothing is read from it.
+const options = {resourceDir: require('node:os').tmpdir()};
 const hash = image => createHash('sha256').update(image).digest('hex');
 `;
 const scenarios: Record<string, string> = {

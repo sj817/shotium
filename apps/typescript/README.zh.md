@@ -353,7 +353,7 @@ import shotium, {
 | `cacheDir` | `string \| null` | `~/.shotium/cache/<project-hash>` | HTTP 磁盘缓存根路径；传入 `null` 完全禁用磁盘缓存 |
 | `cacheMaxBytes` | `number` | 256 MB | 缓存目录容量上限；传入 `0` 表示根据磁盘剩余空间自动估算 |
 | `userAgent` | `string` | 内置默认值 | 自定义全局 HTTP `User-Agent` 请求头 |
-| `resourceDir` | `string` | 引擎二进制所在目录 | 指定 `shotium_data.pak` 与 `shotium_strings.pak` 所在的资源目录 |
+| `resourceDir` | `string` | — | 已弃用并被忽略：资源包已编译进引擎；仍可传入，以兼容现有调用方 |
 
 ### DaemonOptions
 
@@ -566,7 +566,7 @@ export interface StartOptions {
   cacheMaxBytes?: number;
   /** 自定义全局 User-Agent 请求头 */
   userAgent?: string;
-  /** 原生资源包 (shotium_data.pak) 所在目录 */
+  /** @deprecated 已忽略：资源包已编译进引擎 */
   resourceDir?: string;
 }
 

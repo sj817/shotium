@@ -36,10 +36,6 @@ const PROTOCOL_VERSION = 3;
 
 async function main(exeArg: string): Promise<number> {
   const exe = resolve(exeArg);
-  // The resource packs sit beside the executable in a checkout rather than
-  // beside the addon. An install has them in one directory and needs none of
-  // this.
-  const buildDir = path.dirname(exe);
   const corpus = resolve('shot/testdata/render_corpus.html');
   const entry = pathToFileURL(resolve('apps/typescript/dist/index.js')).href;
   const shotium = createRequire(import.meta.url)(resolve('apps/typescript')) as typeof Shotium;
@@ -71,7 +67,6 @@ process.stdout.write(JSON.stringify({bytes: image.length, elapsedMs: Date.now() 
   // -- or a developer's own, started by hand -- can never be mistaken for the
   // one under test.
   const config = {
-    resourceDir: buildDir,
     name: `check-${process.pid}`,
     cacheDir: path.join(os.tmpdir(), `shotium-daemon-check-${process.pid}`),
   };
@@ -130,7 +125,7 @@ process.stdout.write(JSON.stringify({bytes: image.length, elapsedMs: Date.now() 
   // one -- and it does so after the daemon is up, so that the two are
   // demonstrably separate processes rather than one being the other.
   const runtime = new shotium.Runtime();
-  runtime.start({resourceDir: buildDir, cacheDir: null});
+  runtime.start({cacheDir: null});
   const {image: inProcess} = await runtime.screenshot(request);
   await runtime.stop();
   check(sha256(inProcess!) === sha256(first!), 'the daemon and an in-process engine produce the same bytes', sha256(first!).slice(0, 16));

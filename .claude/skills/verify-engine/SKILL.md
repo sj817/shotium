@@ -158,7 +158,7 @@ pnpm verify:ffi --cli out/Shot/shotium.exe --library-dir out/Shot
 pnpm verify:delivery --platform-dir <directory-containing-platform-tarball>
 ```
 
-The FFI check needs the shared library, resource packs, a separate CLI and the
+The FFI check needs the shared library, a separate CLI and the
 language tools. `--cli` defaults to the local `out/Shot` executable; delivery CI
 must pass the extracted CLI explicitly, never assume it is inside the C ABI
 package. For example on Windows:

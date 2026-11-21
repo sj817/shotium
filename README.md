@@ -97,8 +97,8 @@ Download prebuilt binaries for your target platform from **[GitHub Releases](htt
 
 | Category | Attachment naming pattern | Platforms / Languages | Contents |
 |---|---|---|---|
-| **CLI** | `shotium-cli-<platform>.7z` | Windows / macOS (amd64 / arm64); Linux glibc / musl (amd64 / arm64) | Standalone executable, two `.pak` resources, and license |
-| **C ABI** | `shotium-c-abi-<platform>.7z` | Windows / macOS (amd64 / arm64); Linux glibc / musl (amd64 / arm64) | Shared library, `.pak` resources, `shot_api.h`, ABI guides, and import library (Windows) |
+| **CLI** | `shotium-cli-<platform>.7z` | Windows / macOS (amd64 / arm64); Linux glibc / musl (amd64 / arm64) | Standalone executable and license |
+| **C ABI** | `shotium-c-abi-<platform>.7z` | Windows / macOS (amd64 / arm64); Linux glibc / musl (amd64 / arm64) | Shared library, `shot_api.h`, ABI guides, and import library (Windows) |
 | **Examples** | `shotium-example-<language>.7z` | go / python / rust / csharp / java | Complete source projects, page template, dependency manifests, and integrity manifests (no native binaries) |
 | **Checksums** | [`SHA256SUMS`](https://github.com/sj817/shotium/releases/latest/download/SHA256SUMS) | All 21 `.7z` archives | Standard SHA-256 checksum manifest sorted by filename |
 
@@ -185,7 +185,7 @@ await stop();
 
 ### Command line
 
-`shotium-cli-<platform>.7z` contains only the license, two `.pak` resources and the standalone CLI tool `shotium` (`shotium.exe` on Windows), which runs without Node.js or browser installations:
+`shotium-cli-<platform>.7z` contains only the license and the standalone CLI tool `shotium` (`shotium.exe` on Windows), which runs without Node.js or browser installations:
 
 <p align="center">
   <img src="apps/docs/assets/example-cli.webp" width="820"
