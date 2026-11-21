@@ -172,8 +172,8 @@ pnpm verify:ffi --cli out/ffi-native/shotium-cli-windows-amd64/shotium.exe --lib
 Repeat the source delivery check for go, python, rust, csharp and java after
 extracting their `shotium-example-<language>.7z` files. On Linux/macOS use
 `shotium` without `.exe` and the matching platform directories. Keep the ABI
-version check. Before release, validate all six platforms and run
-`pnpm package:checksums --dir dist/release --check` for the complete 17-archive
+version check. Before release, validate all eight platforms and run
+`pnpm package:checksums --dir dist/release --check` for the complete 21-archive
 set and single `SHA256SUMS`; see the engineering reference for the contract.
 The delivery check needs the staged platform tarball; it checks a clean npm
 installation without relying on the checkout's addon or shared library.
