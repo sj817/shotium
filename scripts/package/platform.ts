@@ -55,7 +55,6 @@ const PLATFORMS: Record<string, {npmOs: string; extra: string[]}> = {
 const ARCHES = ['x64', 'arm64'];
 const LIBCS = ['glibc', 'musl'] as const;
 type LinuxLibc = typeof LIBCS[number];
-const PAKS = ['shotium_data.pak', 'shotium_strings.pak'];
 
 function copy(from: string, to: string, mode?: number): void {
   if (!existsSync(from)) throw new Error(`missing build output: ${from}`);
@@ -90,10 +89,6 @@ function main(args: {build: string; os: string; arch: string; dest: string; addo
   rmSync(dest, {recursive: true, force: true});
   mkdirSync(dest, {recursive: true});
   const shipped: string[] = [];
-  for (const pak of PAKS) {
-    copy(path.join(buildDir, pak), path.join(dest, pak), 0o644);
-    shipped.push(pak);
-  }
   for (const file of platform.extra) {
     copy(path.join(buildDir, file), path.join(dest, file), 0o644);
     shipped.push(file);

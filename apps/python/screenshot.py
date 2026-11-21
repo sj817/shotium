@@ -44,7 +44,7 @@ def main():
             buffer.value = None
 
     engine, error = ptr(), ptr()
-    status = lib.shot_engine_create(json.dumps({"resourceDir": str(directory)}).encode(), C.byref(engine), C.byref(error))
+    status = lib.shot_engine_create(b"{}", C.byref(engine), C.byref(error))
     message = take(error).decode("utf-8", errors="replace").rstrip("\0")
     if status:
         raise RuntimeError(f"create failed ({status}): {message}")

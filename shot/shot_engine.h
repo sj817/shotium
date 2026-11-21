@@ -22,7 +22,6 @@ namespace shot {
 enum class EngineStatus { kOk, kUsage, kCapture, kState };
 struct EngineOptions {
   NetworkConfig network;
-  base::FilePath resource_dir;
   bool allow_file_access = false;
 };
 struct CacheOptions {

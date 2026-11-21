@@ -23,7 +23,7 @@ repack("shot_data") {
     "//third_party/blink/public:scaled_resources_100_percent",
   ]
 
-  output = "$root_out_dir/shotium_data.pak"
+  output = "$target_gen_dir/shotium_data.pak"
 }
 
 # Shot's string resources.
@@ -43,7 +43,29 @@ repack("shot_strings") {
     "//ui/strings",
   ]
 
-  output = "$root_out_dir/shotium_strings.pak"
+  output = "$target_gen_dir/shotium_strings.pak"
+}
+
+# Both packs, compiled into every entry point rather than shipped beside it.
+# See shot_resources.h: a pack opened from disk is mmapped MAP_SHARED, which
+# FUSE direct-io mounts refuse, and a separate file can come from another
+# release than the binary reading it.
+action("shot_embedded_paks") {
+  script = "embed_paks.py"
+  inputs = [
+    "$target_gen_dir/shotium_data.pak",
+    "$target_gen_dir/shotium_strings.pak",
+  ]
+  outputs = [ "$target_gen_dir/shot_resources.cc" ]
+  args = [
+    rebase_path(outputs[0], root_build_dir),
+    "ShotDataPak=" + rebase_path(inputs[0], root_build_dir),
+    "ShotStringsPak=" + rebase_path(inputs[1], root_build_dir),
+  ]
+  deps = [
+    ":shot_data",
+    ":shot_strings",
+  ]
 }
 
 # The engine, with nothing yet decided about how it is entered.
@@ -95,11 +117,14 @@ source_set("shot_core") {
     "shot_renderer.h",
     "shot_request.cc",
     "shot_request.h",
+    "shot_resources.h",
     "shot_runtime.cc",
     "shot_runtime.h",
     "shot_url_loader.cc",
     "shot_url_loader.h",
   ]
+  sources += get_target_outputs(":shot_embedded_paks")
+  deps = [ ":shot_embedded_paks" ]
 
   public_deps = [
     "//base",
@@ -165,19 +190,6 @@ source_set("shot_core") {
   }
 }
 
-# The resource packs both entry points need beside them.
-group("shot_resources") {
-  data_deps = [
-    ":shot_data",
-    ":shot_strings",
-  ]
-
-  data = [
-    "$root_out_dir/shotium_data.pak",
-    "$root_out_dir/shotium_strings.pak",
-  ]
-}
-
 # lld stops after twenty undefined symbols. These binaries are linked out of a
 # tree where whole subsystems have been removed, so when one does fail to link
 # the interesting question is which set of things is missing, not which twenty.
@@ -203,7 +215,6 @@ executable("shot") {
   ]
 
   deps = [ ":shot_core" ]
-  data_deps = [ ":shot_resources" ]
 
   configs += [ "//build/config/compiler:wexit_time_destructors" ]
 
@@ -253,7 +264,6 @@ shared_library("shot_c") {
   ]
 
   deps = [ ":shot_core" ]
-  data_deps = [ ":shot_resources" ]
 
   configs += [ "//build/config/compiler:wexit_time_destructors" ]
 
@@ -293,7 +303,6 @@ shared_library("shot_node") {
   defines = [ "NAPI_VERSION=8" ]
   include_dirs = [ "//out/node-sdk/node-v22.20.0/include/node" ]
   deps = [ ":shot_core" ]
-  data_deps = [ ":shot_resources" ]
   ldflags = shot_link_flags
   if (is_win) {
     sources += [ "//apps/typescript/native/delay_load.cc" ]

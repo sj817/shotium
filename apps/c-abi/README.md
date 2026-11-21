@@ -27,11 +27,10 @@ Each release provides prebuilt archives per platform: `shotium-c-abi-<os>-<arch>
 | `libshotium.so` / `libshotium.dylib` / `shotium.dll` | C ABI shared library |
 | `shotium.dll.lib` | Windows import library (for compile-time linking; demos load by dynamic path) |
 | `shot_api.h` | C interface header |
-| `shotium_data.pak`, `shotium_strings.pak` | Engine resource packages required at startup |
 | `C_ABI.md`, `C_ABI.zh.md` | Interface documentation |
 | `LICENSE` | BSD-3-Clause license |
 
-Ensure the library binary and both `.pak` files are kept in the same directory from the matching release; pass this directory path as `resourceDir` during engine initialization; because shared libraries cannot reliably locate their own directory across all operating systems (e.g. on Linux, module path lookups typically resolve to the host executable), the host application must explicitly specify the resource directory
+The engine's resource packages are compiled into the shared library, so the library file is self-contained and can be placed on any filesystem, including network and virtual machine shared folders. Earlier releases shipped two `.pak` files that had to sit beside the library and be passed as `resourceDir`; that option is now accepted and ignored
 
 Linux has separate glibc and musl archives. Use `linux-amd64` or `linux-arm64` on glibc distributions, and the matching `linux-*-musl` archive on Alpine. CI rejects any Linux CLI, shared library or Node addon that retains a non-libc shared-library dependency. Font discovery still uses the host's font files; install the required fonts (for example DejaVu or Noto) in minimal containers
 
@@ -152,14 +151,14 @@ shot_status shot_cache_clear(shot_engine* engine, const char* clear_json, shot_b
 
 | Field | Type | Default | Meaning |
 |---|---|---|---|
-| `resourceDir` | string | Executable directory | Directory containing `shotium_data.pak` and `shotium_strings.pak`. Set to the extracted package directory |
 | `cacheDir` | string | none | HTTP disk cache directory. If omitted, disk caching is disabled and requests will make network round-trips |
 | `cacheMaxBytes` | integer | `0` | Maximum disk cache size in bytes. When set to `0`, Chromium dynamically calculates the cache ceiling based on available disk space |
 | `userAgent` | string | built-in | Custom `User-Agent` string |
 | `allowFileAccess` | boolean | `false` | Default file access policy for local file URLs (`file://`). Requests explicitly specifying `allowFileAccess` override this value |
+| `resourceDir` | string | — | Deprecated and ignored; the resource packages are compiled in. Still accepted so existing callers keep working |
 
 ```json
-{"resourceDir": "/opt/shotium/native/shotium-c-abi-linux-amd64", "cacheDir": "/var/cache/shotium", "cacheMaxBytes": 268435456}
+{"cacheDir": "/var/cache/shotium", "cacheMaxBytes": 268435456}
 ```
 
 ## Capture request
@@ -260,7 +259,7 @@ int main(void) {
   if (shot_abi_version() != SHOT_ABI_VERSION) return 1;
   shot_engine* engine = NULL;
   shot_buffer* error = NULL;
-  if (shot_engine_create("{\"resourceDir\":\"/opt/shotium\"}", &engine, &error) != SHOT_OK) {
+  if (shot_engine_create("{}", &engine, &error) != SHOT_OK) {
     fprintf(stderr, "%s\n", (const char*)shot_buffer_data(error));
     shot_buffer_free(error);
     return 1;

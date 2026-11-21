@@ -24,7 +24,6 @@
 #include "base/memory/raw_ptr.h"
 #include "base/memory/scoped_refptr.h"
 #include "base/no_destructor.h"
-#include "base/path_service.h"
 #include "base/run_loop.h"
 #include "base/synchronization/lock.h"
 #include "base/synchronization/waitable_event.h"
@@ -80,9 +79,10 @@ base::expected<EngineOptions, std::string> ReadEngineOptions(
         options.network.cache_dir = base::FilePath::FromUTF8Unsafe(text);
       } else if (key == "userAgent") {
         options.network.user_agent = text;
-      } else {
-        options.resource_dir = base::FilePath::FromUTF8Unsafe(text);
       }
+      // resourceDir is still accepted and type-checked so that existing
+      // callers keep working, and otherwise ignored: the resource packs are
+      // compiled in (shot_resources.h).
     } else {
       return base::unexpected("unknown option \"" + key + "\"");
     }
@@ -314,16 +314,6 @@ class EngineThread : public base::DelegateSimpleThread::Delegate {
     logging::SetMinLogLevel(verbose && *verbose && *verbose != '0'
                                 ? logging::LOGGING_INFO
                                 : logging::LOGGING_WARNING);
-
-    // Where shotium_data.pak and shotium_strings.pak are. See the header: the
-    // executable finds them next to itself through DIR_MODULE and a shared
-    // library cannot, because on Linux that path resolves through
-    // /proc/self/exe and names the host binary. Overriding the key rather than
-    // teaching ShotRuntime a second way to find its resources keeps the
-    // difference in the one place it exists.
-    if (!options_.resource_dir.empty()) {
-      base::PathService::Override(base::DIR_MODULE, options_.resource_dir);
-    }
 
     auto runtime = ShotRuntime::Create(options_.network);
     if (!runtime.has_value()) {

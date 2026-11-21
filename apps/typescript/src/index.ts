@@ -130,9 +130,8 @@ export class Runtime {
    * Every option has a default. `cacheDir` is the HTTP disk cache and defaults
    * to a per-project directory under `~/.shotium/cache`, and not under the
    * temporary directory, which is defined by not surviving. `null` turns it
-   * off. `resourceDir` is where `shotium_data.pak` and
-   * `shotium_strings.pak` are, and defaults to the directory the engine was
-   * loaded from, which is where they ship.
+   * off. `resourceDir` is deprecated and ignored: the resource packs are
+   * compiled into the engine.
    *
    * The return value is worth reading once. `cacheActive: false` with a
    * `cacheDir` set means the directory could not be opened and this engine is

@@ -68,8 +68,7 @@ function sharedHandle(): Handle|null {
 function conflictingOption(
     options: StartOptions, current: ResolvedStartOptions): string|null {
   const wanted = resolveStartOptions(options);
-  for (const key of ['cacheDir', 'cacheMaxBytes', 'userAgent', 'resourceDir'] as
-       const) {
+  for (const key of ['cacheDir', 'cacheMaxBytes', 'userAgent'] as const) {
     if (options[key] === undefined || wanted[key] === current[key]) {
       continue;
     }
@@ -176,11 +175,8 @@ export class Engine {
     if (resolved.userAgent !== undefined) {
       engineOptions.userAgent = resolved.userAgent;
     }
-    // The packs sit beside the library, and the library cannot find itself on
-    // Linux -- the path the engine resolves for "this module" goes through
-    // /proc/self/exe, which names node. Saying it here is cheaper than
-    // teaching the engine a second way to look. See shot_api.h.
-    engineOptions.resourceDir = resolved.resourceDir ?? binding.directory();
+    // resourceDir is not passed on: the resource packs are compiled into the
+    // engine, which accepts and ignores the option for older callers.
 
     shared = native.create(engineOptions);
     sharedOptions = resolved;

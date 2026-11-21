@@ -97,8 +97,8 @@ npm install @pixel.js/shotium
 
 | 类别 | 附件命名格式 | 包含平台 / 语言 | 包含内容 |
 |---|---|---|---|
-| **CLI** | `shotium-cli-<平台>.7z` | Windows / macOS（amd64 / arm64）；Linux glibc / musl（amd64 / arm64） | 独立可执行文件、两份 `.pak` 核心资源及许可证 |
-| **C ABI** | `shotium-c-abi-<平台>.7z` | Windows / macOS（amd64 / arm64）；Linux glibc / musl（amd64 / arm64） | 动态链接库、`.pak` 资源、`shot_api.h` 头文件、接口指南及导入库（Windows） |
+| **CLI** | `shotium-cli-<平台>.7z` | Windows / macOS（amd64 / arm64）；Linux glibc / musl（amd64 / arm64） | 独立可执行文件及许可证 |
+| **C ABI** | `shotium-c-abi-<平台>.7z` | Windows / macOS（amd64 / arm64）；Linux glibc / musl（amd64 / arm64） | 动态链接库、`shot_api.h` 头文件、接口指南及导入库（Windows） |
 | **示例** | `shotium-example-<语言>.7z` | go / python / rust / csharp / java | 完整源码工程、页面模板、工程依赖清单及校验清单（不含原生库） |
 | **校验清单** | [`SHA256SUMS`](https://github.com/sj817/shotium/releases/latest/download/SHA256SUMS) | 全部 21 个 `.7z` 压缩包 | 标准 SHA-256 校验列表，按文件名排序 |
 
@@ -185,7 +185,7 @@ await stop();
 
 ### 命令行 (CLI)
 
-`shotium-cli-<平台>.7z` 仅包含许可证、两个 `.pak` 资源及独立可执行文件 `shotium`（Windows 上为 `shotium.exe`），无需安装 Node.js 或任何浏览器依赖：
+`shotium-cli-<平台>.7z` 仅包含许可证及独立可执行文件 `shotium`（Windows 上为 `shotium.exe`），无需安装 Node.js 或任何浏览器依赖：
 
 <p align="center">
   <img src="apps/docs/assets/example-cli.webp" width="820"

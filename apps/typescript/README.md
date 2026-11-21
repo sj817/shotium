@@ -353,7 +353,7 @@ Region captures expand the layout viewport by default, comparable to Puppeteer's
 | `cacheDir` | `string \| null` | `~/.shotium/cache/<project-hash>` | Root of the HTTP disk cache. `null` disables caching |
 | `cacheMaxBytes` | `number` | 256 MB | Ceiling on the directory. `0` is not unlimited: the backend then sizes itself from the volume's free space |
 | `userAgent` | `string` | built-in | Overrides the `User-Agent` header |
-| `resourceDir` | `string` | the engine's directory | Where `shotium_data.pak` and `shotium_strings.pak` are; only a source checkout needs it |
+| `resourceDir` | `string` | — | Deprecated and ignored: the resource packs are compiled into the engine. Still accepted so existing callers keep working |
 
 ### DaemonOptions
 
@@ -570,7 +570,7 @@ export interface StartOptions {
   cacheMaxBytes?: number;
   /** Custom global User-Agent header */
   userAgent?: string;
-  /** Directory containing binary resource pak files */
+  /** @deprecated Ignored; the resource packs are compiled into the engine */
   resourceDir?: string;
 }
 

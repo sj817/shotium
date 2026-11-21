@@ -102,7 +102,7 @@ test('release acceptance rejects changed runtime, missing evidence and incomplet
       ['older acceptance policy', (d) => { delete d.acceptancePolicy; }],
       ['missing final snapshot', (d) => { delete d.runtimeIdentity!.candidate!.after; }],
       ['changed bytes', (d) => { d.runtimeIdentity!.candidate!.after!.files[0].sha256 = '0'.repeat(64); }],
-      ['missing resource', (d) => { d.runtimeIdentity!.candidate!.before!.files = d.runtimeIdentity!.candidate!.before!.files.filter((f) => !f.path.endsWith('.pak')); }],
+      ['missing platform manifest', (d) => { d.runtimeIdentity!.candidate!.before!.files = d.runtimeIdentity!.candidate!.before!.files.filter((f) => f.path !== 'platform/package.json'); }],
       ['unbound native addon', (d) => { d.metadata!.candidate!.addon = path.join(temporary, 'other.node'); }],
       ['unbound resources', (d) => { d.metadata!.candidate!.resourceDirectory = path.join(temporary, 'other'); }],
       ['unbound bundle', (d) => { d.metadata!.candidate!.bundleSha256 = '0'.repeat(64); }],

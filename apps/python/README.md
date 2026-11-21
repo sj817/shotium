@@ -40,7 +40,7 @@ curl.exe -fLO https://github.com/sj817/shotium/releases/latest/download/shotium-
 Set-Location shotium-example-python
 ```
 
-> Integrity check: Download [`SHA256SUMS`](https://github.com/sj817/shotium/releases/latest/download/SHA256SUMS) and run `sha256sum --check --ignore-missing SHA256SUMS`; native libraries reside in `native/shotium-c-abi-<platform>/`, containing the shared library, headers, and `.pak` resource files
+> Integrity check: Download [`SHA256SUMS`](https://github.com/sj817/shotium/releases/latest/download/SHA256SUMS) and run `sha256sum --check --ignore-missing SHA256SUMS`; native libraries reside in `native/shotium-c-abi-<platform>/`, containing the shared library and headers
 
 
 ## Run
@@ -49,7 +49,7 @@ Set-Location shotium-example-python
 python3 screenshot.py native/shotium-c-abi-linux-amd64 card.html card.png
 ```
 
-On Windows, the interpreter executable is typically `python`; positional arguments are `<library-dir> <input.html> <output.png>`, where `<library-dir>` is also passed to the engine as `resourceDir`; the script renders `card.html` at 720×380, prints capture statistics JSON to stdout, and writes `card.png` (pixel-identical to output from the `shotium` CLI)
+On Windows, the interpreter executable is typically `python`; positional arguments are `<library-dir> <input.html> <output.png>`; the script renders `card.html` at 720×380, prints capture statistics JSON to stdout, and writes `card.png` (pixel-identical to output from the `shotium` CLI)
 
 Providing a nonexistent input file demonstrates the error handling flow: exit code is 1, stderr outputs `capture failed (2): ...`, statistics are still reported, and no output image is generated
 
@@ -74,7 +74,7 @@ if lib.shot_abi_version() != 3:
 
 engine = ptr()
 error = ptr()
-if lib.shot_engine_create(json.dumps({"resourceDir": str(directory)}).encode(), byref(engine), byref(error)):
+if lib.shot_engine_create(b"{}", byref(engine), byref(error)):
     raise RuntimeError(take(error))          # take() copies the bytes, then frees the buffer
 
 try:

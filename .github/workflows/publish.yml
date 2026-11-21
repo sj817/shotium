@@ -503,8 +503,8 @@ jobs:
             echo "---"
             echo
             echo "### CLI and C ABI / 独立命令行与动态库"
-            echo "- **English**: Download \`shotium-cli-<platform>.7z\` for the CLI, or \`shotium-c-abi-<platform>.7z\` for the shared library, header and guides. Each archive includes its own resource packs. npm installs its platform package automatically."
-            echo "- **简体中文**：命令行用户下载 \`shotium-cli-<平台>.7z\`；语言集成下载 \`shotium-c-abi-<平台>.7z\`，其中包含动态库、头文件和接入说明。两类包各自包含资源文件；npm 用户由包管理器自动安装平台依赖。"
+            echo "- **English**: Download \`shotium-cli-<platform>.7z\` for the CLI, or \`shotium-c-abi-<platform>.7z\` for the shared library, header and guides. Resources are compiled into each binary. npm installs its platform package automatically."
+            echo "- **简体中文**：命令行用户下载 \`shotium-cli-<平台>.7z\`；语言集成下载 \`shotium-c-abi-<平台>.7z\`，其中包含动态库、头文件和接入说明。资源已编译进二进制；npm 用户由包管理器自动安装平台依赖。"
             echo
             echo "---"
             echo

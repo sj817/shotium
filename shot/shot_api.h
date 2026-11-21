@@ -123,8 +123,7 @@ SHOT_EXPORT void shot_buffer_free(shot_buffer* buffer);
 //     "cacheDir":         "...",   // the HTTP cache; omitted means none
 //     "cacheMaxBytes":    0,       // 0 lets the backend size itself
 //     "userAgent":        "...",
-//     "resourceDir":      "...",   // where shotium_data.pak and shotium_strings.pak
-//                                  //   are; see below
+//     "resourceDir":      "...",   // deprecated and ignored; see below
 //     "allowFileAccess":  false    // what a request that says nothing means
 //   }
 //
@@ -134,12 +133,9 @@ SHOT_EXPORT void shot_buffer_free(shot_buffer* buffer);
 // directory that sizes itself against a 2 TB disk is a surprise waiting in
 // somebody's CI.
 //
-// resourceDir matters more than it looks. An executable finds its resource
-// packs next to itself and a shared library cannot: on Linux the path base
-// resolves for "the current module" is /proc/self/exe, which inside a library
-// loaded by node names the node binary. A caller that ships the packs beside
-// the library must say where they are. Omitting it keeps the executable's
-// behaviour, which is right for a host that put everything in one directory.
+// resourceDir is accepted for compatibility and otherwise ignored. The
+// resource packs used to ship beside the library and had to be located; they
+// are now compiled into it, so the library is the whole delivery.
 //
 // On failure `*out_engine` is NULL and `*out_error` receives a message the
 // caller can print. `out_error` may be NULL if the caller does not want one;

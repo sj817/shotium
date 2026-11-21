@@ -61,12 +61,8 @@ func run() error {
 		// Native buffers remain valid until free; copy into Go-owned memory.
 		return append([]byte(nil), unsafe.Slice((*byte)(data(buffer)), int(size(buffer)))...)
 	}
-	options, err := json.Marshal(map[string]any{"resourceDir": dir})
-	if err != nil {
-		return err
-	}
 	var engine, failure uintptr
-	status := create(string(options), &engine, &failure)
+	status := create("{}", &engine, &failure)
 	defer free(failure)
 	if status != 0 {
 		return fmt.Errorf("create failed (%d): %s", status, strings.TrimRight(string(read(failure)), "\x00"))

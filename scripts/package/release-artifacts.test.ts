@@ -23,6 +23,7 @@ async function temporary(t: TestContext): Promise<string> {
 async function nativeFixture(directory: string): Promise<{build: string; sourceRoot: string}> {
   const build = path.join(directory, 'build'), sourceRoot = path.join(directory, 'source');
   await mkdir(build, {recursive: true});
+  // The packs are leftovers of an older build directory: they must not ship.
   for (const name of ['shotium', 'shotium.exe', 'shotium.dll', 'shotium.dll.lib',
     'libshotium.so', 'libshotium.dylib', 'shotium.node', 'shotium_data.pak', 'shotium_strings.pak']) {
     await writeFile(path.join(build, name), 'native fixture: ' + name);
@@ -46,12 +47,12 @@ test('all eight native platforms: real 7z extraction preserves isolated contents
       const stem = 'shotium-' + kind + '-' + platform;
       const dest = path.join(directory, stem);
       const expected = kind === 'cli'
-        ? [os === 'win' ? 'shotium.exe' : 'shotium', 'shotium_data.pak', 'shotium_strings.pak', 'LICENSE']
+        ? [os === 'win' ? 'shotium.exe' : 'shotium', 'LICENSE']
         : kind === 'node'
-        ? ['shotium.node', 'shotium_data.pak', 'shotium_strings.pak', 'LICENSE']
+        ? ['shotium.node', 'LICENSE']
         : [os === 'win' ? 'shotium.dll' : os === 'mac' ? 'libshotium.dylib' : 'libshotium.so',
           ...(os === 'win' ? ['shotium.dll.lib'] : []),
-          'shotium_data.pak', 'shotium_strings.pak', 'shot_api.h', 'C_ABI.md', 'C_ABI.zh.md', 'LICENSE'];
+          'shot_api.h', 'C_ABI.md', 'C_ABI.zh.md', 'LICENSE'];
       await stageNativeDelivery({...fixture, kind, os, dest});
       assert.deepEqual((await readdir(dest)).sort(), expected.sort(), stem);
       const archive = path.join(directory, stem + '.7z');
@@ -80,11 +81,11 @@ test('missing native input and a nonempty stage fail without merging a delivery'
   await rm(path.join(fixture.sourceRoot, 'shot/shot_api.h'));
   await stageNativeDelivery({...fixture, kind: 'cli', os: 'win', dest});
   await assert.rejects(stageNativeDelivery({...fixture, kind: 'cli', os: 'win', dest}), /must be empty/);
-  assert.equal((await readdir(dest)).length, 4);
+  assert.equal((await readdir(dest)).length, 2);
   await writeFile(path.join(dest, 'shotium.dll'), 'accidental combined package');
   await assert.rejects(verifyNativeDelivery('cli', 'win', dest), /unexpected cli delivery contents/);
-  await rm(path.join(fixture.build, 'shotium_data.pak'));
-  await assert.rejects(stageNativeDelivery({...fixture, kind: 'cli', os: 'win', dest: dest + '-new'}), /missing.*shotium_data.pak/);
+  await rm(path.join(fixture.build, 'shotium.exe'));
+  await assert.rejects(stageNativeDelivery({...fixture, kind: 'cli', os: 'win', dest: dest + '-new'}), /missing.*shotium.exe/);
 });
 
 test('packaged markdown links point to the guides, header and license actually shipped', () => {

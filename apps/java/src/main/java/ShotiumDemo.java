@@ -44,7 +44,7 @@ public class ShotiumDemo {
         if (version != 3) throw new IllegalStateException("C ABI mismatch: expected 3, got " + version);
         Gson json = new Gson();
         PointerByReference engine = new PointerByReference(), error = new PointerByReference();
-        int status = api.shot_engine_create(json.toJson(Map.of("resourceDir", directory.toString())), engine, error);
+        int status = api.shot_engine_create("{}", engine, error);
         try {
             if (status != 0) throw new IllegalStateException("create failed (" + status + "): " + text(error.getValue()));
         } finally { api.shot_buffer_free(error.getValue()); }

@@ -122,7 +122,7 @@ Use `pnpm build:engine` for local engine generation and builds into
 `out/Shot`; the script handles ICU data, Node SDK preparation and toolchain
 retries. Do not replace it with hand-written `gn gen` or `autoninja`
 commands. The Windows targets produce `shotium.exe`, `shotium.dll` and
-`shotium.node`, with resource packs alongside them.
+`shotium.node`; resource packs are compiled into each of them.
 
 Use the script's default parallelism until the current machine's memory
 supports a change. Relative `--log` paths resolve from the repository root.

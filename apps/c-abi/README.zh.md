@@ -27,11 +27,10 @@ shotium 为所有编程语言提供跨平台的原生 C 动态库：`shotium.dll
 | `libshotium.so` / `libshotium.dylib` / `shotium.dll` | C ABI 原生动态库 |
 | `shotium.dll.lib` | （仅 Windows）供编译期链接动态库使用；动态加载方案无需此文件 |
 | `shot_api.h` | C 接口头文件 |
-| `shotium_data.pak`、`shotium_strings.pak` | 引擎初始化所需的资源包 |
 | `C_ABI.md`、`C_ABI.zh.md` | C ABI 使用规范说明文档 |
 | `LICENSE` | BSD-3-Clause 开源协议文件 |
 
-动态库与两个 `.pak` 资源文件必须保持在同一目录下且版本严格匹配；创建引擎时需将该所在目录作为 `resourceDir` 参数传入；动态库自身无法可靠隐式定位资源包（例如在 Linux 上动态模块解析可能回退至主可执行文件路径），因此必须由调用方显式指定
+引擎资源包已编译进动态库，动态库单个文件即可运行，可以放在任意文件系统上，包括网络共享和虚拟机共享文件夹；早期版本需要在动态库旁放两个 `.pak` 文件并通过 `resourceDir` 指定目录，该选项现在仍可传入，但会被忽略
 
 Linux 分别提供 glibc 与 musl 压缩包：glibc 发行版使用 `linux-amd64` 或 `linux-arm64`，Alpine 使用对应的 `linux-*-musl` 包。CI 会拒绝仍依赖 libc 之外共享库的 Linux CLI、动态库或 Node 插件。字体发现仍读取宿主字体文件，极简容器需安装所需字体（如 DejaVu 或 Noto）
 
@@ -151,14 +150,14 @@ shot_status shot_cache_clear(shot_engine* engine, const char* clear_json, shot_b
 
 | 字段 | 类型 | 默认值 | 说明 |
 |---|---|---|---|
-| `resourceDir` | string | 可执行文件目录 | `shotium_data.pak` 与 `shotium_strings.pak` 所在路径，请传入解压目录 |
 | `cacheDir` | string | 无 | HTTP 磁盘缓存目录；省略时禁用缓存（渲染网络 URL 每次需重复进行网络协商） |
 | `cacheMaxBytes` | integer | `0` | 缓存容量上限字节数；`0` 表示由存储后端根据可用磁盘空间动态决定 |
 | `userAgent` | string | 内置默认值 | 自定义全局 HTTP `User-Agent` 请求头 |
 | `allowFileAccess` | boolean | `false` | 全局是否默认允许加载本地 `file:` 子资源（单次请求可覆盖此配置） |
+| `resourceDir` | string | — | 已弃用并被忽略：资源包已编译进引擎；仍可传入，以兼容现有调用方 |
 
 ```json
-{"resourceDir": "/opt/shotium/native/shotium-c-abi-linux-amd64", "cacheDir": "/var/cache/shotium", "cacheMaxBytes": 268435456}
+{"cacheDir": "/var/cache/shotium", "cacheMaxBytes": 268435456}
 ```
 
 ## 截图请求
@@ -258,7 +257,7 @@ int main(void) {
   if (shot_abi_version() != SHOT_ABI_VERSION) return 1;
   shot_engine* engine = NULL;
   shot_buffer* error = NULL;
-  if (shot_engine_create("{\"resourceDir\":\"/opt/shotium\"}", &engine, &error) != SHOT_OK) {
+  if (shot_engine_create("{}", &engine, &error) != SHOT_OK) {
     fprintf(stderr, "%s\n", (const char*)shot_buffer_data(error));
     shot_buffer_free(error);
     return 1;

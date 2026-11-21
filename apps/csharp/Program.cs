@@ -12,7 +12,7 @@ try
     NativeLibrary.SetDllImportResolver(typeof(Shotium).Assembly, (name, _, _) => name == "shotium" ? library : IntPtr.Zero);
     var version = Shotium.shot_abi_version();
     if (version != 3) throw new InvalidOperationException($"C ABI mismatch: expected 3, got {version}");
-    var status = Shotium.shot_engine_create(JsonSerializer.Serialize(new { resourceDir = directory }), out var engine, out var error);
+    var status = Shotium.shot_engine_create("{}", out var engine, out var error);
     var message = Shotium.TakeText(error);
     if (status != 0) throw new InvalidOperationException($"create failed ({status}): {message}");
     try
