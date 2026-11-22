@@ -158,7 +158,7 @@ negotiation; it does not establish rendering or native-addon correctness.
 Its path filters are in the workflow. A missing run is not a pass, and a
 successful probe is not a successful build. Report skipped checks and reasons.
 
-For a release, the version commit, all six platform builds and the tag must
+For a release, the version commit, all eight platform builds and the tag must
 identify the same commit. A check on another SHA or platform does not cover it.
 Only run the publishing procedure when a release is requested.
 
