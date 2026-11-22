@@ -11,6 +11,8 @@
 #include <tuple>
 #include <utility>
 
+#include "base/base_paths.h"
+#include "base/files/file_path.h"
 #include "base/functional/bind.h"
 #include "base/logging.h"
 #include "base/time/time.h"
@@ -22,6 +24,7 @@
 #include "base/message_loop/message_pump.h"
 #include "base/message_loop/message_pump_type.h"
 #include "base/observer_list.h"
+#include "base/path_service.h"
 #include "base/synchronization/condition_variable.h"
 #include "base/synchronization/lock.h"
 #include "base/thread_annotations.h"
@@ -307,6 +310,20 @@ base::expected<std::unique_ptr<ShotRuntime>, std::string> ShotRuntime::Create(
   // pack at the first supported scale, the data pack after it, and ICU's
   // application locale settled since LoadLocaleResources() never runs.
   ui::RegisterPathProvider();
+  // GetApplicationLocale() below asks whether a locale pack exists, which
+  // looks the path up through ui::DIR_LOCALES, and ui's provider creates that
+  // directory as it answers. That left an empty `locales` beside every
+  // binary, and for the addon and the shared library on Linux beside the
+  // host's executable, since DIR_MODULE resolves through /proc/self/exe. The
+  // same path, overridden without creating it: no pack is shipped there, so
+  // the lookup answers exactly as before and the filesystem is not touched.
+  base::FilePath assets;
+  if (base::PathService::Get(base::DIR_ASSETS, &assets) &&
+      assets.IsAbsolute()) {
+    base::PathService::OverrideAndCreateIfNeeded(
+        ui::DIR_LOCALES, assets.Append(FILE_PATH_LITERAL("locales")),
+        /*is_absolute=*/true, /*create=*/false);
+  }
   ui::ResourceBundle::InitSharedInstanceWithBuffer(shot::ShotStringsPak(),
                                                    ui::kScaleFactorNone);
   ui::ResourceBundle& resources = ui::ResourceBundle::GetSharedInstance();
